@@ -1,4 +1,4 @@
-#include "cw2.h"
+#include "dg2.h"
 #include <string.h>
 #include "creature.h"
 #include "gmode.h"
@@ -117,7 +117,7 @@ void Creature::Init()  {
   mvision = 0;
   height = stats->height;
   speedmul = 1;
-  frame = FRAME_WALK;
+  frame = FRAME_STAND;
   xpos = 0;
   ypos = 0;
   attacking = 0;
@@ -127,6 +127,7 @@ void Creature::Init()  {
   dirt = -1;
   dirf = -1;
   distt = -1;
+  progress = 0;
   target = 0;
   weap[1].range = -1;
   location[0] = NULL;
@@ -156,15 +157,32 @@ void Creature::Init()  {
 void Creature::SetCreatureGraphic(int ctype, char *dir)  {
   if(GraphicsInitialized)  return;
   GraphicsInitialized = 1;
-  int ctr2, ctr3, strst = strlen(dir);
+  int ctr2, strst = strlen(dir);
   char *buf = new char[strst+20];
   strcpy(buf, dir);
   strcpy(&buf[strst], ".crf");
   ResFile crf(buf, ARGV[0]);
-  for(ctr3=0; ctr3<3; ctr3++)  {
-    for(ctr2=0; ctr2<FRAME_MAX; ctr2++)  {
-      pics[ctr3][ctype][ctr2] = crf.GetGraphic();
+
+  CharBag *ver = crf.GetCharBag();
+  if((*ver)[0] != VER1 || (*ver)[1] != VER2
+              || (*ver)[2] != VER3 || (*ver)[3] != VER4)  {
+    if((*ver)[3] == 0)  {
+      Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d!\n",
+              buf, (*ver)[0], (*ver)[1], (*ver)[2]);
       }
+    else  {
+      Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d-B%d!\n",
+              buf, (*ver)[0], (*ver)[1], (*ver)[2], (*ver)[3]);
+      }
+    }
+  delete ver;
+
+  for(ctr2=0; ctr2<FRAME_MAX; ctr2++)  {
+    pics[2][ctype][ctr2] = crf.GetGraphic();
+    pics[1][ctype][ctr2] = crf.GetGraphic();
+    pics[0][ctype][ctr2] = crf.GetGraphic();
+    ShortBag *tmpb = crf.GetShortBag();
+    delete tmpb;
     }
   }
 
@@ -271,7 +289,8 @@ void Creature::UpdateCondition()  {
       crawling = 1;
       limping = 1;
       SetSpeedMul(4);
-      frame = FRAME_CRAWL;
+//      frame = FRAME_CRAWL;
+      frame = FRAME_STAND;
       height = 1;
       if(inside[0] != NULL)  inside[0]->Fall();
       Changed[thingnum] = 1;
@@ -290,7 +309,7 @@ void Creature::UpdateCondition()  {
 	}
       }
     if(hit <= 0 || fatigue <= -50000)  {
-      if(goal[0] == NULL || goal[0]->Goal() != ACTION_EXCUSED)
+      if(goal[0] != NULL && goal[0]->Goal() != ACTION_EXCUSED)
 	GoalAbort();
       if(!down) Deselect();
       down = 1;
@@ -302,7 +321,8 @@ void Creature::UpdateCondition()  {
       height = stats->height;
       limping = 1;
       SetSpeedMul(2);
-      frame = FRAME_LIMP;
+//      frame = FRAME_LIMP;
+      frame = FRAME_STAND;
       Changed[thingnum] = 1;
       if(crawling || down)  {
 	int tmp = vision;
@@ -322,7 +342,7 @@ void Creature::UpdateCondition()  {
     if(crawling || limping || down)  {
       height = stats->height;
       SetSpeedMul(1);
-      frame = FRAME_WALK;
+      frame = FRAME_STAND;
       Changed[thingnum] = 1;
       if(crawling || down)  {
 	int tmp = vision;
@@ -374,48 +394,53 @@ void Creature::Act()  {
     if(list[target] == NULL)  {
       target = thingnum;
       }
-    if((frame < FRAME_M0_1 || frame > FRAME_M0_7)
+    if(((frame & 4080) == FRAME_ATT || (frame & 4080) == FRAME_ATTP)
 	&& (target == thingnum || target == 0))  {
       ResetFrame();
       return;
       }
-    if(frame<FRAME_M0_1 || frame>FRAME_M0_7)  {
+    if((frame & 4080) == FRAME_ATT || (frame & 4080) == FRAME_ATTP)  {
       if(weap[1].range > 0 && InWeaponRange((Creature *)list[target], 1))
 	cw=1;
       else if(weap[0].range>0 && InWeaponRange((Creature *)list[target], 0))
 	cw=0;
       else { target = 0; return; }
       }
-    if(frame == FRAME_WALK || frame == FRAME_LIMP) frame=FRAME_M0_1;
-    else if(frame == FRAME_M0_1)  frame=FRAME_M0_2;
-    else if(frame == FRAME_M0_2)  frame=FRAME_M0_3;
-    else if(frame == FRAME_M0_3)  frame=FRAME_M0_4;
-    else if(frame == FRAME_M0_4)  frame=FRAME_M0_5;
-    else if(frame == FRAME_M0_5)  frame=FRAME_M0_6;
-    else if(frame == FRAME_M0_6)  frame=FRAME_M0_7;
-    else if(frame == FRAME_M0_7)  { ResetFrame(); target = 0; }
-    if(frame == FRAME_M0_5)  {
-      Attack((Creature *)list[target], cw);
-      if(goal[0] == NULL)  {
-	}
-      else if(target == 0 || list[target] == NULL)  {
-	GoalDoneFirst();
-	EvaluateGoal();
-	}
-      else if((((Creature *)list[target])->hit <= 10)
-	  && (goal[0]->Goal() == ACTION_ATTACK)
-	  && (goal[0]->Object() == target)) {
-	GoalDoneFirst();
-	EvaluateGoal();
-	}
-      else if((((Creature *)list[target])->hit <= 0)
-	  && (goal[0]->Goal() == ACTION_KILL)
-	  && (goal[0]->Object() == target)) {
-	GoalDoneFirst();
-	EvaluateGoal();
+//    if(frame == FRAME_WALK || frame == FRAME_LIMP) frame=FRAME_M0_1;
+    if(frame == FRAME_STAND) frame=FRAME_ATTP;
+    else if((frame & 4080) == FRAME_ATTP) {
+      ++frame;
+      if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	frame = FRAME_ATT;
+	Attack((Creature *)list[target], cw);
+	if(goal[0] == NULL)  {
+	  }
+	else if(target == 0 || list[target] == NULL)  {
+	  GoalDoneFirst();
+	  EvaluateGoal();
+	  }
+	else if((((Creature *)list[target])->hit <= 10)
+	    && (goal[0]->Goal() == ACTION_ATTACK)
+	    && (goal[0]->Object() == target)) {
+	  GoalDoneFirst();
+	  EvaluateGoal();
+	  }
+	else if((((Creature *)list[target])->hit <= 0)
+	    && (goal[0]->Goal() == ACTION_KILL)
+	    && (goal[0]->Object() == target)) {
+	  GoalDoneFirst();
+	  EvaluateGoal();
+	  }
 	}
       }
+    else if((frame & 4080) == FRAME_ATT)  {
+      frame++;
+      if(pics[gm.xstep>>5][gtype][frame] == NULL)
+	{ ResetFrame(); target = 0; }
+      }
+    else { ResetFrame(); target = 0; }
     Changed[thingnum] = 1;
+    Waiting[thingnum] = 4;
     }
 
   else  if(exists && (dirt >= 0))  {
@@ -426,8 +451,9 @@ void Creature::Act()  {
 	frame--;
 	Changed[thingnum] = 1;
 	}
-      else  if((frame != FRAME_WALK) && (frame != FRAME_LIMP) && 
-		(frame != FRAME_CRAWL))  {
+//      else  if((frame != FRAME_WALK) && (frame != FRAME_LIMP) && 
+//		(frame != FRAME_CRAWL))  {
+      else  if(frame != FRAME_STAND)  {
 	ResetFrame();
 	Changed[thingnum] = 1;
 	}
@@ -448,34 +474,33 @@ void Creature::Act()  {
 	  }
 	int steps = speed;
 	distt++;
-	if(frame == FRAME_WALK)  frame=FRAME_WALK01;
-	else if(frame == FRAME_WALK01)  frame=FRAME_WALK02;
-	else if(frame == FRAME_WALK02)  frame=FRAME_WALK03;
-	else if(frame == FRAME_WALK03)  frame=FRAME_WALK04;
-	else if(frame == FRAME_WALK04)  frame=FRAME_WALK05;
-	else if(frame == FRAME_WALK05)  frame=FRAME_WALK06;
-	else if(frame == FRAME_WALK06)  frame=FRAME_WALK07;
-	else if(frame == FRAME_WALK07)  frame=FRAME_WALK;
-	else if(frame == FRAME_LIMP)  frame=FRAME_LIMP01;
-	else if(frame == FRAME_LIMP01)  frame=FRAME_LIMP02;
-	else if(frame == FRAME_LIMP02)  frame=FRAME_LIMP03;
-	else if(frame == FRAME_LIMP03)  frame=FRAME_LIMP04;
-	else if(frame == FRAME_LIMP04)  frame=FRAME_LIMP05;
-	else if(frame == FRAME_LIMP05)  frame=FRAME_LIMP06;
-	else if(frame == FRAME_LIMP06)  frame=FRAME_LIMP07;
-	else if(frame == FRAME_LIMP07)  frame=FRAME_LIMP08;
-	else if(frame == FRAME_LIMP08)  frame=FRAME_LIMP09;
-	else if(frame == FRAME_LIMP09)  frame=FRAME_LIMP10;
-	else if(frame == FRAME_LIMP10)  frame=FRAME_LIMP11;
-	else if(frame == FRAME_LIMP11)  frame=FRAME_LIMP12;
-	else if(frame == FRAME_LIMP12)  frame=FRAME_LIMP13;
-	else if(frame == FRAME_LIMP13)  frame=FRAME_LIMP14;
-	else if(frame == FRAME_LIMP14)  frame=FRAME_LIMP15;
-	else if(frame == FRAME_LIMP15)  frame=FRAME_LIMP;
-	else if(frame == FRAME_CRAWL)  frame=FRAME_CRAWL01;
-	else if(frame == FRAME_CRAWL01)  frame=FRAME_CRAWL02;
-	else if(frame == FRAME_CRAWL02)  frame=FRAME_CRAWL03;
-	else if(frame == FRAME_CRAWL03)  frame=FRAME_CRAWL;
+//	int trv = (frame & 15);
+	if((frame & 248) == FRAME_WALKL)  {
+	  if(progress == 0)  {
+	    ++frame;
+	    if(pics[gm.xstep>>5][gtype][frame] == NULL)
+	      { frame-=2; progress=1; }
+	    }
+	  else  {
+	    --frame;
+	    if(frame < FRAME_WALKL)
+	      { frame=FRAME_WALKR; progress=0; }
+	    }
+	  }
+	else if((frame & 248) == FRAME_WALKR)  {
+	  if(progress == 0)  {
+	    ++frame;
+	    if(pics[gm.xstep>>5][gtype][frame] == NULL)
+	      { frame-=2; progress=1; }
+	    }
+	  else  {
+	    --frame;
+	    if(frame < FRAME_WALKR)
+	    if(pics[gm.xstep>>5][gtype][frame] == NULL)
+	      { frame=FRAME_WALKL; progress=0; }
+	    }
+	  }
+	else  { progress = 0; frame=FRAME_WALKL + 1; }
 	if(dirt % 2)  {
 	  steps *= 7;
 	  steps /= 4;
@@ -596,7 +621,7 @@ void Creature::Act()  {
 	  frame--;
 	  Changed[thingnum] = 1;
 	  }
-	else  if((frame != FRAME_WALK) && (frame != FRAME_WALK))  {
+	else  if(frame != FRAME_STAND)  {
 	  ResetFrame();
 	  Changed[thingnum] = 1;
 	  }
@@ -629,16 +654,9 @@ void Creature::Act()  {
   else if(exists && (dirf >= 0))  {
     Changed[thingnum] = 1;
     int add_dir = 1;
-    if(frame == FRAME_WALK)  frame=FRAME_WALK01;
-    else if(frame == FRAME_WALK01)  frame=FRAME_WALK04;
-    else if(frame == FRAME_WALK04)  frame=FRAME_WALK05;
-    else if(frame == FRAME_WALK05)  frame=FRAME_WALK;
-    else if(frame == FRAME_LIMP)  frame=FRAME_LIMP02;
-    else if(frame == FRAME_LIMP02)  frame=FRAME_LIMP04;
-    else if(frame == FRAME_LIMP04)  frame=FRAME_LIMP06;
-    else if(frame == FRAME_LIMP06)  frame=FRAME_LIMP;
-    else if(frame == FRAME_CRAWL)  frame=FRAME_CRAWL01;
-    else if(frame == FRAME_CRAWL01)  frame=FRAME_CRAWL;
+    if(frame == FRAME_STAND)  frame=FRAME_WALKL;
+    else if(frame == FRAME_WALKL)  frame=FRAME_WALKR;
+    else if(frame == FRAME_WALKR)  frame=FRAME_STAND;
     if(facing > dirf)  {
       if((facing-dirf) < ((dirf+12)-facing))  add_dir = 11;
       }
@@ -664,14 +682,12 @@ void Creature::Act()  {
 	}
       if(tf != (fatigue/50000)) UpdateCondition();
       }
-    if(goal[0] == NULL || (goal[0]->Goal() != ACTION_EXTINGUISH
-	&& goal[0]->Goal() != ACTION_DIG
-	&& goal[0]->Goal() != ACTION_IGNITE))  {
+    if(goal[0] == NULL) {
       if((frame%4) == 2)  {
 	frame--;
 	Changed[thingnum] = 1;
 	}
-      else  if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+      else  if(frame != FRAME_STAND)  {
 	ResetFrame();
 	Changed[thingnum] = 1;
 	}
@@ -791,12 +807,28 @@ void Creature::Think()  {
       if(range == 0) range = vision;
       FlipToCloserThing(goal[0]->objects);
 
-      if(Approach(list[goal[0]->Object()], range))  {
-	Spell *tmps = new Spell(this, spname, goal[0]->objects);
-	sustained_spell += tmps->Number();
-	GoalDoneFirst();
-	if(owner == p1) p1->RefigureSpellcasters();
+      if(progress == -99)  {
+	--frame;
+	if((frame & 15) > 8)  {
+	  frame=FRAME_STAND;
+	  GoalDoneFirst();
+	  }
 	}
+      else if(Approach(list[goal[0]->Object()], range))  {
+	if(spname < 32) frame = FRAME_CAST+progress;
+	else frame = FRAME_PRAY+progress;
+	if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	  Spell *tmps = new Spell(this, spname, goal[0]->objects);
+	  sustained_spell += tmps->Number();
+	  if(owner == p1) p1->RefigureSpellcasters();
+	  progress = -99;
+	  --frame;
+	  }
+	else ++progress;
+	}
+      else  progress = 0;
+      Changed[thingnum] = 1;
+      Waiting[thingnum] = 4;
       }break;
 
 //    case (ACTION_CAST+SPELL_GLOBE_OF_SEEING):
@@ -828,7 +860,7 @@ void Creature::Think()  {
       else  if(((Creature *)list[goal[0]->Object()])->hit > 10)  {
 	if(facing == DirectionTo((Creature *)list[goal[0]->Object()]))  {
 	  if(InWeaponRange((Creature *)list[goal[0]->Object()], 0))  {
-            if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+            if(frame != FRAME_STAND)  {
 	      ResetFrame();
               Changed[thingnum] = 1;
 	      }
@@ -858,7 +890,7 @@ void Creature::Think()  {
 	}
       else  if(((Creature *)list[goal[0]->Object()])->hit >= 0)  {
 	if(InWeaponRange((Creature *)list[goal[0]->Object()], 0))  {
-          if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+          if(frame != FRAME_STAND)  {
 	    ResetFrame();
 	    Changed[thingnum] = 1;
 	    }
@@ -915,23 +947,17 @@ void Creature::Think()  {
 
     case ACTION_DIG:  {
       if(Approach(list[goal[0]->Object()], 1))  {
-	if(frame == FRAME_M0_1)  { frame=FRAME_M0_2; }
-	else if(frame == FRAME_M0_2)  { frame=FRAME_M0_3; }
-	else if(frame == FRAME_M0_3)  { frame=FRAME_M0_4; }
-	else if(frame == FRAME_M0_4)  {
-	  frame=FRAME_M0_5;
+	if((frame & 248) == FRAME_DIG)  { ++frame; }
+	if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	  frame=FRAME_STAND;
 	  if(list[goal[0]->Object()]->BurnFeul(10) <= 0)  {
 	    ((Cell*)list[goal[0]->Object()])->SetTerrain(TERRAIN_DIRT);
 	    }
-	  }
-	else if(frame == FRAME_M0_5)  { frame=FRAME_M0_6; }
-	else if(frame == FRAME_M0_6)  { frame=FRAME_M0_7; }
-	else if(frame == FRAME_M0_7)  {
 	  ResetFrame();
 	  if(((Cell*)list[goal[0]->Object()])->Terrain() == TERRAIN_DIRT)
 	    GoalDoneFirst();
 	  }
-	else { frame=FRAME_M0_1; }
+	else { frame=FRAME_DIG; }
 	Changed[thingnum] = 1;
 	}
       } break;
@@ -949,26 +975,52 @@ void Creature::Think()  {
 	break;
 	}
       if(Approach(list[goal[0]->Object()], 1))  {
-	if(frame == FRAME_M0_1)  { frame=FRAME_M0_2; }
-	else if(frame == FRAME_M0_2)  { frame=FRAME_M0_3; }
-	else if(frame == FRAME_M0_3)  { frame=FRAME_M0_4; }
-	else if(frame == FRAME_M0_4)  {
-	  frame=FRAME_M0_5;
-	  list[goal[0]->Object()]->Heat(1, 500);
+	if(progress==0)  {
+	  for(frame=FRAME_STORE; pics[gm.xstep>>5][gtype][frame] != NULL;
+		++frame);
+	  --frame; progress=1;
 	  }
-	else if(frame == FRAME_M0_5)  { frame=FRAME_M0_6; }
-	else if(frame == FRAME_M0_6)  { frame=FRAME_M0_7; }
-	else if(frame == FRAME_M0_7)  {
-	  ResetFrame();
-	  if(((Creature*)list[goal[0]->Object()])->ftemp >
+	else if(progress==1)  {
+	  --frame;
+	  if(frame < FRAME_STORE)  { frame=FRAME_IGNP; progress=2; }
+	  }
+	else if(progress==2)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	    frame=FRAME_IGN; progress=3;
+	    }
+	  }
+	else if(progress==3)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	    list[goal[0]->Object()]->Heat(1, 500);
+	    if(((Creature*)list[goal[0]->Object()])->ftemp >
 		(((Creature*)list[goal[0]->Object()])->fresist)+1
 		|| ((Creature*)list[goal[0]->Object()])->ffeul <= 0)  {
-	    GoalDone();
+	      progress=4;
+	      for(frame=FRAME_IGNP; pics[gm.xstep>>5][gtype][frame] != NULL;
+			++frame);
+	      --frame; progress=4;
+	      }
+	    else { frame=FRAME_IGN; }
+	    }
+	  }
+	else if(progress==4)  {
+	  --frame;
+	  if(frame < FRAME_IGNP)  {
+	    frame=FRAME_STORE; progress=5;
+	    }
+	  }
+	else if(progress==5)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] != NULL)  {
+	    ResetFrame();
+	    GoalDoneFirst();
 	    Move(Location(0)->Location(0)->Next(facing+6));
 	    }
 	  }
-	else { frame=FRAME_M0_1; }
 	Changed[thingnum] = 1;
+	Waiting[thingnum] = 4;
 	}
       } break;
 
@@ -986,27 +1038,52 @@ void Creature::Think()  {
 
     case ACTION_EXTINGUISH:  {
       if(Approach(list[goal[0]->Object()], 1))  {
-//	printf("Douse in %d\n", frame);
-	if(frame == FRAME_M0_1)  { frame=FRAME_M0_2; }
-	else if(frame == FRAME_M0_2)  { frame=FRAME_M0_3; }
-	else if(frame == FRAME_M0_3)  { frame=FRAME_M0_4; }
-	else if(frame == FRAME_M0_4)  {
-	  frame=FRAME_M0_5;
-	  list[goal[0]->Object()]->Heat(-1, 500);
-	  location[0]->Heat(-1, 500);
-//	  printf("Dousing!\n");
+	if(progress==0)  {
+	  for(frame=FRAME_STORE; pics[gm.xstep>>5][gtype][frame] != NULL;
+		++frame);
+	  --frame; progress=1;
 	  }
-	else if(frame == FRAME_M0_5)  { frame=FRAME_M0_6; }
-	else if(frame == FRAME_M0_6)  { frame=FRAME_M0_7; }
-	else if(frame == FRAME_M0_7)  {
-	  ResetFrame();
-	  if(((Creature*)list[goal[0]->Object()])->ftemp <= 0
-		&& ((Creature*)Location(0))->ftemp <= 0)
+	else if(progress==1)  {
+	  --frame;
+	  if(frame < FRAME_STORE)  { frame=FRAME_EXTP; progress=2; }
+	  }
+	else if(progress==2)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	    frame=FRAME_EXT; progress=3;
+	    }
+	  }
+	else if(progress==3)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	    list[goal[0]->Object()]->Heat(-1, 500);
+	    location[0]->Heat(-1, 500);
+
+	    if(((Creature*)list[goal[0]->Object()])->ftemp <= 0
+		&& ((Creature*)Location(0))->ftemp <= 0)  {
+	      progress=4;
+	      for(frame=FRAME_EXTP; pics[gm.xstep>>5][gtype][frame] != NULL;
+			++frame);
+	      --frame; progress=4;
+	      }
+	    else { frame=FRAME_EXT; }
+	    }
+	  }
+	else if(progress==4)  {
+	  --frame;
+	  if(frame < FRAME_EXTP)  {
+	    frame=FRAME_STORE; progress=5;
+	    }
+	  }
+	else if(progress==5)  {
+	  ++frame;
+	  if(pics[gm.xstep>>5][gtype][frame] != NULL)  {
+	    ResetFrame();
 	    GoalDoneFirst();
+	    }
 	  }
-	else { frame=FRAME_M0_1; }
-//	printf("Douse out %d\n", frame);
 	Changed[thingnum] = 1;
+	Waiting[thingnum] = 4;
 	}
       } break;
 
@@ -1099,7 +1176,7 @@ void Creature::Think()  {
 		|| ((list[goal[0]->Object()] == Location(0))
 		&& (NULL == location[1])))  {
 	GoalDone();
-        if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+        if(frame != FRAME_STAND)  {
 	  ResetFrame();
           Changed[thingnum] = 1;
 	  }
@@ -1117,7 +1194,8 @@ void Creature::Think()  {
       mat = st%MATERIAL_MAXBUILD;
       st /= MATERIAL_MAXBUILD;
 //      printf("Building %d out of %d!\r\n", st, mat);
-      if(mat_type != mat || (mat_ammt < struct_qty[st] && mat_ammt < 100))  {
+//      if(mat_type != mat || (mat_ammt < struct_qty[st] && mat_ammt < 100))  {
+      if(progress < 4 && (mat_type != mat || mat_ammt < 1))  {
 	Action *tmpa = new Action(ACTION_GOGET, mat, struct_qty[st]);
 	DoFirst(tmpa);
         }
@@ -1127,34 +1205,75 @@ void Creature::Think()  {
 	  Move(Location(0)->Next(0));
 	  }
 	else if(Approach(list[goal[0]->Object()], 1))  {
-	  if(list[goal[0]->Object()]->Type() == THING_STRUCT)  {
-	    Structure *tmps = (Structure*)list[goal[0]->Object()];
-	    mat_ammt = tmps->AddMaterials(mat_type, mat_ammt);
-	    if(mat_ammt == 0) mat_type = MATERIAL_NONE;
-	    if(tmps->IsFinished()) GoalDoneFirst();
+	  if(progress==0)  {
+	    for(frame=FRAME_STORE; pics[gm.xstep>>5][gtype][frame] != NULL;
+		++frame);
+	    --frame; progress=1;
 	    }
-	  else  {
-	    Structure *tmps = new Structure(st, mat);
-	    if(!(tmps->Place((Cell*)list[goal[0]->Object()])))  {
-	      delete tmps;
+	  else if(progress==1)  {
+	    --frame;
+	    if(frame < FRAME_STORE)  { frame=FRAME_BUILDP; progress=2; }
+	    }
+	  else if(progress==2)  {
+	    ++frame;
+	    if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	      frame=FRAME_BUILD; progress=3;
+	      }
+	    }
+	  else if(progress==3)  {
+	    ++frame;
+	    if(pics[gm.xstep>>5][gtype][frame] == NULL)  {
+	      frame = FRAME_BUILD;
+	      if(list[goal[0]->Object()]->Type() == THING_STRUCT)  {
+		Structure *tmps = (Structure*)list[goal[0]->Object()];
+		mat_ammt -= tmps->AddMaterials(mat_type, 1);
+		if(mat_ammt == 0) mat_type = MATERIAL_NONE;
+		if(tmps->IsFinished()) { progress = 4; }
+		}
+	      else  {
+		Structure *tmps = new Structure(st, mat);
+		if(!(tmps->Place((Cell*)list[goal[0]->Object()])))  {
+		  delete tmps;
+		  //progress = 4;
+		  }
+		else  {
+		  goal[0]->objects -= goal[0]->Object();
+		  goal[0]->objects += tmps->Number();
+		  goal[0]->objects.RotateToElement(goal[0]->objects.Size()-1);
+		  }
+		}
+	      }
+	    if(progress == 4)  { // Ready for next step
+	      for(frame=FRAME_BUILDP; pics[gm.xstep>>5][gtype][frame] != NULL;
+			++frame);
+	      --frame; progress=4;
+	      }
+	    }
+	  else if(progress==4)  {
+	    --frame;
+	    if(frame < FRAME_BUILDP)  {
+	      frame=FRAME_STORE; progress=5;
+	      }
+	    }
+	  else if(progress==5)  {
+	    ++frame;
+	    if(pics[gm.xstep>>5][gtype][frame] != NULL)  {
+	      ResetFrame();
 	      GoalDoneFirst();
 	      }
-	    else  {
-	      goal[0]->objects -= goal[0]->Object();
-	      goal[0]->objects += tmps->Number();
-	      goal[0]->objects.RotateToElement(goal[0]->objects.Size()-1);
-	      }
 	    }
+	  Changed[thingnum] = 1;
+	  Waiting[thingnum] = 4;
 	  }
 	}
-      }break;
+      } break;
     }
   }
 
 void Creature::DoFirst(const Action *in)  {
   if(goal[0] != NULL && goal[0]->Goal() == ACTION_EXCUSED)  return;
   int ctr;
-  if(goal[11] != NULL) delete goal[11];
+  if(goal[11] != NULL) goal[11]->Detach();
   goal[11] = NULL;
   for(ctr=11; ctr>0; ctr--) goal[ctr] = goal[ctr-1];
 
@@ -1220,8 +1339,7 @@ void Creature::updateme()  {
 	if(selected) selbox.Move(x, y);
 	else selbox.Erase();
 	if(cw>=0 && weap[cw].image[0][gm.xstep>>5] != NULL) {
-	  weaps.SetImage(weap[cw].image[frame >= FRAME_M0_1
-		&& frame <= FRAME_M0_7][gm.xstep>>5]);
+	  weaps.SetImage(weap[cw].image[0][gm.xstep>>5]);
 	  //weaps.UseImage(weap[cw].image[frame >= FRAME_M0_1
 		//&& frame <= FRAME_M0_7][gm.xstep>>5]);
 	  weaps.Move(x, y, ((facing<<16)/12));
@@ -1666,8 +1784,7 @@ int Creature::Move(Cell *cellto)  {
   dirt = DirectionTo(cellto);
   if(!GetPath(dirt))  {
     if(Location(0)->IsNextTo(cellto))  {
-      if((frame != FRAME_WALK) && (frame != FRAME_LIMP)
-		&& (frame != FRAME_DOWN))  {
+      if(frame != FRAME_STAND)  {
         ResetFrame();
         Changed[thingnum] = 1;
 	}
@@ -1684,7 +1801,7 @@ int Creature::Move(Cell *cellto)  {
 		|| (cellto->Next(ctr)->Inside(1) == NULL))
 	  full = 0;
       if(full == 1 && DistanceTo(cellto) < 3)  {
-        if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+        if(frame != FRAME_STAND) {
           ResetFrame();
           Changed[thingnum] = 1;
           }
@@ -1717,9 +1834,11 @@ int Creature::Move(Cell *cellto)  {
   }
 
 void  Creature::ResetFrame()  {
-  if(!limping)  frame = FRAME_WALK;
-  else  if(!crawling)  frame = FRAME_LIMP;
-  else  frame = FRAME_CRAWL;
+//  if(!limping)
+	frame = FRAME_STAND;
+//  else  if(!crawling)  frame = FRAME_LIMP;
+//  else  frame = FRAME_CRAWL;
+  progress = 0;
   }
 
 int Creature::SafestDirection()  return ret {
@@ -1820,6 +1939,7 @@ void Creature::ClearGoals()  {
     if(goal[ctr] != NULL) goal[ctr]->Detach();
     goal[ctr] = NULL;
     }
+  progress = 0;
   }
 
 void Creature::GoalAbort()  {
@@ -1829,6 +1949,7 @@ void Creature::GoalAbort()  {
   goal[0]->Detach(); 
   for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
   goal[11] = NULL;
+  progress = 0;
   debug_position = 556;
   }
 
@@ -1840,6 +1961,7 @@ void Creature::GoalDone()  {
   goal[0]->Detach();
   for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
   goal[11] = NULL;
+  progress = 0;
   debug_position = 557;
   }
 
@@ -1853,6 +1975,7 @@ void Creature::GoalDoneFirst()  {
     for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
     goal[11] = NULL;
     }
+  progress = 0;
   debug_position = 558;
   }
 

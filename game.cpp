@@ -39,7 +39,7 @@ Game::Game(char *inmap, int nump, int numcomp)  {
   debug_position = 1010;
   SPEED = 40;
   SPEED_STEP = 10;
-  SPEED_MIN = 20;
+  SPEED_MIN = 10;
   SPEED_MAX = 80;
   SetSpeed();
   PACKET_DELAY = 6;
@@ -142,6 +142,8 @@ void Game::Play(int pnum)  {
 		backplate = new Graphic("graphics/1280/menuback.bmp");
 		break;
     }
+  MainButton0->tcolor = 0;
+  MainButton1->tcolor = 0;
   debug_position = 1120;
   mainp = screen->NewPanel(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
   mouse->SetCursor(&Normalg);
@@ -161,7 +163,7 @@ void Game::Play(int pnum)  {
   debug_position = 1140;
   Creature *dude = NULL;
   debug_position = 1141;
-  dude->SetCreatureGraphic(CREATURE_DUDE, "dude");
+  dude->SetCreatureGraphic(CREATURE_GUY, "guy");
   debug_position = 1142;
   Weapon bow, spear, sword;
   bow.ammo = AMMO_ARROW;
@@ -169,6 +171,7 @@ void Game::Play(int pnum)  {
   bow.pdam = 50;
   bow.bdam = 0;
   bow.rof = 80;
+  bow.SetImage("graphics/weapons/longbow");
   spear.range = 2;
   spear.mrange = 2;
   spear.pdam = 20;
@@ -182,7 +185,7 @@ void Game::Play(int pnum)  {
   for(ctr2=0; ctr2<num_players; ctr2++)  {
     for(ctr=0; ctr<NUM_GUYS; ctr++)  {
       debug_position = 1143;
-      dude = new Creature(CREATURE_DUDE, players[ctr2]);
+      dude = new Creature(CREATURE_GUY, players[ctr2]);
       debug_position = 1144;
       if(dude == NULL)  Exit(1, "Out of Memory for creatures!!!\r\n");
       debug_position = 1145;

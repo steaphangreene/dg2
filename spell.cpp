@@ -162,7 +162,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       location[0]->spell += thingnum;
       {
 	Creature *tmpc;
-	tmpc = new Creature(CREATURE_DUDE, p1);
+	tmpc = new Creature(CREATURE_GUY, p1);
 	location[1] = (Cell*)tmpc;
 	tmpc->facing = 0;
 	tmpc->location[0] = location[0];

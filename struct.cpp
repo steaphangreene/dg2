@@ -17,6 +17,7 @@ Structure::Structure(int Type, int Material)  {
   if(!graphicsinitialized)  InitGraphics();
   material = Material;
   struct_type = Type;
+  finished = 0;
   if(material == MATERIAL_WOOD)  {
     fresist = 40;
     ffeul = struct_qty[struct_type];
@@ -209,6 +210,7 @@ void Structure::InitGraphics()  {
     }
   stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0] =
 	new Graphic("graphics/structs/r_wall/00.bmp");
+  stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0]->tcolor = 0;
 
   for(ctr=0; ctr<NEIGHBOR_MAX; ctr++)  {
     FILE *tmpfl;
@@ -223,8 +225,10 @@ void Structure::InitGraphics()  {
 
   stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0] =
 	new Graphic("graphics/structs/ramp.bmp");
+  stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0]->tcolor = 0;
   stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0] =
 	new Graphic("graphics/structs/bridge.bmp");
+  stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0]->tcolor = 0;
  int ctrn;
  for(ctrn=0; ctrn < NEIGHBOR_MAX; ctrn++) {
   for(ctr=0; ctr<STRUCT_MAX; ctr++)  {
@@ -268,6 +272,10 @@ int Structure::TakeMaterials(int type, int ammt)  {
 
 int Structure::AddMaterials(int type, int ammt)  {
   contains[type] += ammt;
-  if(type == material && contains[type] >= struct_qty[struct_type]) finished=1;
-  return 0;
+  if((!finished) && type == material
+	&& contains[type] >= struct_qty[struct_type]) {
+    finished=1;
+    contains[type] -= struct_qty[struct_type];
+    }
+  return ammt;
   }

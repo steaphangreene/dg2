@@ -181,7 +181,7 @@ void Thing::Remove()  {
     Changed[thingnum] = 0;
     Waiting[thingnum] = 0;
     }
-  else  fprintf(stderr, "Not Removed = %d\n", thingnum);
+//  else  fprintf(stderr, "Not Removed = %d\n", thingnum);
   }
 
 void Thing::update()  {

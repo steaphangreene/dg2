@@ -5,7 +5,7 @@
 #include "creature.h"
 #include "gmode.h"
 #include "map.h"
-#include "cw2.h"
+#include "dg2.h"
 #include "game.h"
 #include "spell.h"
 #include "struct.h"
@@ -148,6 +148,7 @@ s2n[SCAN_U]=20; s2n[SCAN_V]=21; s2n[SCAN_W]=22; s2n[SCAN_X]=23; s2n[SCAN_Z]=24;
     Graphic pbg("graphics/800/buttons/blanks1.bmp");
     Graphic pg, upg;
     upbg.FindTrueCenter();	pbg.FindTrueCenter();
+    upbg.tcolor = 0;		pbg.tcolor = 0;
 
     Normalg.Trim();	Fleeg.Trim();		Attackg.Trim();
     Buildg.Trim();  Castg.Trim();  Followg.Trim();  Digg.Trim();
@@ -176,7 +177,7 @@ s2n[SCAN_U]=20; s2n[SCAN_V]=21; s2n[SCAN_W]=22; s2n[SCAN_X]=23; s2n[SCAN_Z]=24;
 
     RockMg.Trim();	WoodMg.Trim();
 #define Trim FindTrueCenter
-    Normalg.Trim();	Fleeg.Trim();		Attackg.Trim();
+    Normalg.SetCenter(1,1);	Fleeg.Trim();		Attackg.Trim();
     Buildg.Trim();  Castg.Trim();  Followg.Trim();  Digg.Trim();
     Getg.Trim();	Harvestg.Trim();	Igniteg.Trim();
     Joing.Trim();	Killg.Trim();		Lookg.Trim();
