@@ -25,8 +25,8 @@ extern Network net;
 extern Thing things;
 extern Mouse *mouse;
 extern char multi;
-extern Window mainw;
-extern Window miniw;
+extern Panel mainp;
+extern Panel minip;
 extern int MainButtonNum;
 
     Graphic Normalg("graphics/pointers/normal.bmp");
@@ -615,7 +615,10 @@ s2n[SCAN_U]=20; s2n[SCAN_V]=21; s2n[SCAN_W]=22; s2n[SCAN_X]=23; s2n[SCAN_Z]=24;
   }
 
 Player::~Player()  {
-  if(Selectlist != NULL)  delete Selectlist;
+  if(Selectlist != NULL)  {
+    ClearSelectList();
+    delete Selectlist;
+    }
   int ctr;
   Button *cb;
   for(ctr=0; ctr<256; ctr++)  {
@@ -660,6 +663,30 @@ void Player::TakeTurn(int pkg)  {
       UserAction curact;
       if(multi)  things.StartTalk();
       else  things.ClearTalk();
+      if(doing == DOING_NORMAL && cur_comm == COMMAND_EXTINGUISH)  {
+	int ctr;
+	Action *tmpa = new Action(ACTION_EXTINGUISH, intparam[0]);
+	for(ctr=0; ctr<Selectsize; ctr++)  {
+	  ((Creature *)Selectlist[ctr])->Do(tmpa);
+	  }
+	ResetState();
+	}
+      else if(doing == DOING_NORMAL && cur_comm == COMMAND_LOOK)  {
+	int ctr;
+	Action *tmpa = new Action(ACTION_LOOK, intparam[0]);
+	for(ctr=0; ctr<Selectsize; ctr++)  {
+	  ((Creature *)Selectlist[ctr])->Do(tmpa);
+	  }
+	ResetState();
+	}
+      else if(doing == DOING_NORMAL && cur_comm == COMMAND_DIG)  {
+	int ctr;
+	Action *tmpa = new Action(ACTION_DIG, listparam[0]);
+	for(ctr=0; ctr<Selectsize; ctr++)  {
+	  ((Creature *)Selectlist[ctr])->Do(tmpa);
+	  }
+	ResetState();
+	}
       if(doing == DOING_NORMAL && cur_comm == COMMAND_BUILD)  {
 	if(argstate==1)  {
 	  PickMaterial(&intparam[1]);
@@ -669,8 +696,8 @@ void Player::TakeTurn(int pkg)  {
 	  }
 	else {
 	  int ctr;
-	  Action tmpa(ACTION_BUILD+(intparam[0]*MATERIAL_MAXBUILD)+intparam[1],
-		listparam[0]);
+	  Action *tmpa = new Action(ACTION_BUILD+(intparam[0]*MATERIAL_MAXBUILD)
+		+intparam[1], listparam[0]);
 	  for(ctr=0; ctr<Selectsize; ctr++)  {
 	    ((Creature *)Selectlist[ctr])->Do(tmpa);
 //	    printf("Told Creature to build!\r\n");
@@ -721,7 +748,7 @@ void Player::TakeTurn(int pkg)  {
 	  if(listparam[1].Size() > 0) tmpl += listparam[1];
 	  if(listparam[2].Size() > 0) tmpl += listparam[2];
 	  if(listparam[3].Size() > 0) tmpl += listparam[3];
-	  Action tmpa(ACTION_CAST+intparam[0], tmpl);
+	  Action *tmpa = new Action(ACTION_CAST+intparam[0], tmpl);
 	  for(ctr=0; ctr<Selectsize; ctr++)  {
 	    if(((Creature *)Selectlist[ctr])->CanCast(intparam[0])
 		&& (!((Creature *)Selectlist[ctr])->IsSustaining()))  {
@@ -800,7 +827,7 @@ void Player::TakeTurn(int pkg)  {
         }
 
       if(curact.Type() == USERACTION_MOUSE)  {
-        if(curact.Win() == mainw)  {
+        if(curact.Pan() == mainp)  {
 	  if(curact.ButtonPressed() == 3)  {
 	    }
 	  else  if(cur_comm == COMMAND_DEFAULT && curact.ButtonPressed() == 2)  {
@@ -821,13 +848,13 @@ void Player::TakeTurn(int pkg)  {
 	    }
 	  cur_comm = COMMAND_DEFAULT;
 	  }
-        else  if(curact.Win() == miniw)  {
+        else  if(curact.Pan() == minip)  {
 	  if(curact.ButtonPressed() == 2)  {
 	    OrderSelected(COMMAND_MINIDEFAULT, curact);
 	    }
 	  else if(curact.ButtonPressed() == 1)  {
 	    while((user->NextAction() != NULL)
-		&& (user->NextAction()->Win() == miniw) 
+		&& (user->NextAction()->Pan() == minip) 
 		&& (user->NextAction()->ButtonPressed() == 1))  {
 	      curact=user->Action();
 	      }
@@ -859,19 +886,19 @@ void Player::TakeTurn(int pkg)  {
 		(realigny*2) < (gm.ysize/2)/gm.ystep && 
 		(-realignx*2) < (gm.xsize)/gm.xstep && 
 		(-realigny*2) < (gm.ysize/2)/gm.ystep)  {
-	  screen->ScrollWindow32(mainw, realignx*(gm.xstep/16),
+	  screen->ScrollPanel32(mainp, realignx*(gm.xstep/16),
 		realigny*(2*gm.ystep));
 	  }
         else  {
-	  screen->EraseWindowSprites(mainw);
+	  screen->ErasePanelSprites(mainp);
 	  }
         gm.xstart+=4*realignx;
         gm.ystart+=2*realigny;
         curmap->ReAlign(realignx, realigny);
         }
       if(rescale)  {
-        screen->EraseWindowSprites(mainw);
-        screen->EraseWindowBackground(mainw);
+        screen->ErasePanelSprites(mainp);
+        screen->ErasePanelBackground(mainp);
         curmap->ReScale();
         }
 
@@ -887,13 +914,34 @@ void Player::TakeTurn(int pkg)  {
         }
       else if(curact.Type() == USERACTION_BUTTONPRESSED && NumSelected() > 0) {
 	if(curact.ButtonPressed() == __com[SCAN_A])  cur_comm = COMMAND_ATTACK;
-	else if(curact.ButtonPressed()==__com[SCAN_K])cur_comm = COMMAND_KILL;
-	else if(curact.ButtonPressed()==__com[SCAN_F])cur_comm = COMMAND_FOLLOW;
-	else if(curact.ButtonPressed()==__com[SCAN_L])cur_comm = COMMAND_LOOK;
-	else if(curact.ButtonPressed()==__com[SCAN_Q]){
+	else if(curact.ButtonPressed()==__com[SCAN_K])
+	  cur_comm = COMMAND_KILL;
+	else if(curact.ButtonPressed()==__com[SCAN_F])
+	  cur_comm = COMMAND_FOLLOW;
+	else if(curact.ButtonPressed()==__com[SCAN_S])  {
 	  int ctr;
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
-	    Action tmpa(ACTION_STOP_SPELLS);
+	    Action *tmpa = new Action(ACTION_STOP);
+	    ((Creature *)Selectlist[ctr])->Do(tmpa);
+	    }
+	  cur_comm = COMMAND_DEFAULT;
+	  }
+	else if(curact.ButtonPressed()==__com[SCAN_L])  {
+	  cur_comm = COMMAND_LOOK;
+	  SelectThing(&intparam[0]);
+	  }
+	else if(curact.ButtonPressed()==__com[SCAN_X])  {
+	  cur_comm = COMMAND_EXTINGUISH;
+	  SelectCell(&intparam[0]);
+	  }
+	else if(curact.ButtonPressed()==__com[SCAN_D])  {
+	  cur_comm = COMMAND_DIG;
+	  SelectLCells(&listparam[0]);
+	  }
+	else if(curact.ButtonPressed()==__com[SCAN_Q])  {
+	  int ctr;
+	  for(ctr = 0; ctr < Selectsize; ctr++)  {
+	    Action *tmpa = new Action(ACTION_STOP_SPELLS);
 	    ((Creature *)Selectlist[ctr])->Do(tmpa);
 	    }
 	  cur_comm = COMMAND_DEFAULT;
@@ -913,7 +961,7 @@ void Player::TakeTurn(int pkg)  {
 	else if(curact.ButtonPressed()==__com[SCAN_BQUOTE]){
 	  int ctr;
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
-	    Action tmpa(ACTION_FLEE,
+	    Action *tmpa = new Action(ACTION_FLEE,
 		((Creature *)Selectlist[ctr])->SafestDirection());
 	    ((Creature *)Selectlist[ctr])->Do(tmpa);
 	    }
@@ -936,6 +984,8 @@ void Player::TakeTurn(int pkg)  {
 	case COMMAND_KILL:	mouse->SetCursor(&Killg);	break;
 	case COMMAND_CAST:	mouse->SetCursor(&Castg);	break;
 	case COMMAND_PRAY:	mouse->SetCursor(&Natureg);	break;
+	case COMMAND_EXTINGUISH:mouse->SetCursor(&Extg);	break;
+	case COMMAND_DIG:	mouse->SetCursor(&Digg);	break;
 	}
       if(Selectsize == 1)  {
 	Graphic tmpg;
@@ -1066,43 +1116,29 @@ void Player::OrderSelected(Command com, UserAction ma)  {
       if(whoop > 0)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
+	Action *tmpa;
+	if(com == COMMAND_KILL)  tmpa = new Action(ACTION_KILL, whooped);
+	else  tmpa = new Action(ACTION_ATTACK, whooped);
 	for(ctr = 0; ctr < Selectsize; ctr++)  {
-	  if(com == COMMAND_KILL)  {
-//	    Action tmpa(ACTION_KILL,(Thing *)whooped[(ctr*whoop)/Selectsize]);
-	    Action tmpa(ACTION_KILL, whooped);
-	    ((Creature *)Selectlist[ctr])->Do(tmpa);
-	    whooped.RotateToElement(1);
-	    }
-	  else  {
-//	    Action tmpa(ACTION_ATTACK,(Thing *)whooped[(ctr*whoop)/Selectsize]);
-	    Action tmpa(ACTION_ATTACK, whooped);
-	    ((Creature *)Selectlist[ctr])->Do(tmpa);
-	    whooped.RotateToElement(1);
-	    }
+	  ((Creature *)Selectlist[ctr])->Do(tmpa);
 	  }
 	return;
 	}
       else  if(com == COMMAND_ATTACK)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
+	Action *tmpa = new Action(ACTION_ATTACK, hit);
 	for(ctr = 0; ctr < Selectsize; ctr++)  {
-//	  Action tmpa(ACTION_ATTACK,
-//		(Thing *)hit[(ctr*(ma.Size()))/Selectsize]);
-	  Action tmpa(ACTION_ATTACK, hit);
 	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  hit.RotateToElement(1);
 	  }
 	return;
 	}
       else  if(com == COMMAND_KILL)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
+	Action *tmpa = new Action(ACTION_KILL, hit);
 	for(ctr = 0; ctr < Selectsize; ctr++)  {
-//	  Action tmpa(ACTION_KILL,
-//		(Thing *)hit[(ctr*(ma.Size()))/Selectsize]);
-	  Action tmpa(ACTION_KILL, hit);
 	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  hit.RotateToElement(1);
 	  }
 	return;
 	}
@@ -1121,7 +1157,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 //	  if(((Creature *)Selectlist[0])->ToldYou != NULL)
 //		((Creature *)Selectlist[0])->ToldYou->Play();
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
-	    Action tmpa(ACTION_FOLLOW, who);
+	    Action *tmpa = new Action(ACTION_FOLLOW, who);
 	    ((Creature *)Selectlist[ctr])->Do(tmpa);
 	    handled = 1;
 	    }
@@ -1132,7 +1168,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 	  if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
-	    Action tmpa(ACTION_FOLLOW_PATH, curmap->CellAt(x1, y1));
+	    Action *tmpa = new Action(ACTION_FOLLOW_PATH, curmap->CellAt(x1, y1));
 	    ((Creature *)Selectlist[ctr])->Do(tmpa);
 	    }
 	  }
@@ -1160,7 +1196,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
-	Action tmpa(ACTION_TURN, ndir);
+	Action *tmpa = new Action(ACTION_TURN, ndir);
 	((Creature *)Selectlist[0])->Do(tmpa);
 	return;
 	}
@@ -1174,7 +1210,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
     if((x1==x2) && (y1==y2))  {
       if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
-      Action tmpa(ACTION_GO, curmap->CellAt(x1, y1));
+      Action *tmpa = new Action(ACTION_GO, curmap->CellAt(x1, y1));
       for(ctr=0; ctr<Selectsize; ctr++)  {
 	((Creature *)Selectlist[ctr])->Do(tmpa);
 	}
@@ -1184,7 +1220,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
       if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
       for(ctr=0; ctr<Selectsize; ctr++)  {
-	Action tmpa(ACTION_GO, curmap->CellAt(x1+(random()%xd),
+	Action *tmpa = new Action(ACTION_GO, curmap->CellAt(x1+(random()%xd),
 		y1+(random()%yd)));
 	((Creature *)Selectlist[ctr])->Do(tmpa);
 	}
@@ -1495,12 +1531,29 @@ void Player::DoSpecial(UserAction &curact)  {
 	  }
 	}
       }break;
-    case(DOING_SELECTCELL):  {
+    case(DOING_SELECTTHING):  {
       if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Win() == mainw || curact.Win() == miniw))  {
+	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
 	int x = curact.Startx(), y = curact.Starty();
 	Cell *tmpc;
-	if(curact.Win() == mainw)  curmap->Screen2Cell(x, y);
+	if(curact.Pan() == mainp)  curmap->Screen2Cell(x, y);
+	else  curmap->Mini2Cell(x, y);
+	tmpc = curmap->CellAt(x, y);
+	if(tmpc == NULL) *workingint = 0;
+	else *workingint = tmpc->Number();
+	workingint = NULL;
+	doing = DOING_NORMAL;
+	UserAction tmpa;
+	curact = tmpa;
+	ResetInput();
+	}
+      }break;
+    case(DOING_SELECTCELL):  {
+      if(curact.Type() == USERACTION_MOUSE
+	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
+	int x = curact.Startx(), y = curact.Starty();
+	Cell *tmpc;
+	if(curact.Pan() == mainp)  curmap->Screen2Cell(x, y);
 	else  curmap->Mini2Cell(x, y);
 	tmpc = curmap->CellAt(x, y);
 	if(tmpc == NULL) *workingint = 0;
@@ -1514,12 +1567,12 @@ void Player::DoSpecial(UserAction &curact)  {
       }break;
     case(DOING_SELECTCELLS):  {
       if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Win() == mainw || curact.Win() == miniw))  {
+	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
 	int x1 = curact.Startx(), y1 = curact.Starty();
 	int x2 = curact.Endx(), y2 = curact.Endy();
 	if(x1>x2)  { int tmp = x1; x1=x2; x2=tmp; }
 	if(y1>y2)  { int tmp = y1; y1=y2; y2=tmp; }
-	if(curact.Win() == mainw)  {
+	if(curact.Pan() == mainp)  {
 	  curmap->Screen2Cell(x1, y1);
 	  curmap->Screen2Cell(x2, y2);
 	  }
@@ -1546,12 +1599,12 @@ void Player::DoSpecial(UserAction &curact)  {
       }break;
     case(DOING_SELECTLCELLS):  {
       if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Win() == mainw || curact.Win() == miniw))  {
+	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
 	int x1 = curact.Startx(), y1 = curact.Starty();
 	int x2 = curact.Endx(), y2 = curact.Endy();
 //	if(x1>x2)  { int tmp = x1; x1=x2; x2=tmp; }
 //	if(y1>y2)  { int tmp = y1; y1=y2; y2=tmp; }
-	if(curact.Win() == mainw)  {
+	if(curact.Pan() == mainp)  {
 	  curmap->Screen2Cell(x1, y1);
 	  curmap->Screen2Cell(x2, y2);
 	  }
@@ -1935,8 +1988,8 @@ void Player::PickMaterial(int *v)  {
 
 void Player::SelectCell(int *v)
   {
-  mouse->SetWindowBehavior(mainw, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  mouse->SetWindowBehavior(miniw, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  mouse->SetPanelBehavior(mainp, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  mouse->SetPanelBehavior(minip, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
   workingint = v, workinglist = NULL, doing = DOING_SELECTCELL;
   }
 
@@ -1947,8 +2000,8 @@ void Player::SelectCells(IntList *v)
 
 void Player::SelectLCells(IntList *v)   
   {
-  mouse->SetWindowBehavior(mainw, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
-  mouse->SetWindowBehavior(miniw, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
+  mouse->SetPanelBehavior(mainp, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
+  mouse->SetPanelBehavior(minip, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
   workingint = NULL, workinglist = v, doing = DOING_SELECTLCELLS;
   }
 
@@ -1999,8 +2052,8 @@ void Player::SelectEnemyObjects(IntList *v)
 
 void Player::ResetInput()  {
   mouse->SetBehavior(MOUSE_CLICK, MOUSE_IGNORE, MOUSE_CLICK);
-  mouse->SetWindowBehavior(mainw, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
-  mouse->SetWindowBehavior(miniw, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetPanelBehavior(mainp, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetPanelBehavior(minip, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
   user->MapKeyToButton(SCAN_PAUSE, MainButtonNum);
   }
 

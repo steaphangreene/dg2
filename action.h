@@ -12,6 +12,10 @@
 #define	ACTION_FLEE		9
 #define	ACTION_STOP_SPELLS	10
 #define	ACTION_EXCUSED		11
+#define	ACTION_EXTINGUISH	12
+#define	ACTION_STOP		13
+#define	ACTION_DIG		14
+#define	ACTION_LOOK		15
 #define	ACTION_CAST		32
 #define	ACTION_PRAY		64
 #define	ACTION_BUILD		96	//MUST BE HIGHEST!!!
@@ -23,31 +27,38 @@ class Action  {
   public:
   Action()  {
     goal = 0;
+    connected = 0;
     };
   Action(Action& in)  {
     goal = in.goal;
     objects = in.objects;
+    connected = 0;
     };
   Action(int v1)  {
     goal = v1;
+    connected = 0;
     };
   Action(int v1, const IntList &v2)  {
     goal = v1;
     objects = (IntList &)v2;
+    connected = 0;
     };
   Action(int v1, Thing *v2)  {
     goal = v1;
     objects.Clear();
     if(v2 != NULL)  objects += v2->Number();
+    connected = 0;
     };
   Action(int v1, int v2)  {
     goal = v1;
     objects.Clear();
     objects += v2;
+    connected = 0;
     };
   Action operator =(Action& in)  {
     goal = in.goal;
     objects = in.objects;
+    connected = 0;
     return *this;
     };
   int Object()  {
@@ -62,12 +73,19 @@ class Action  {
     goal = 0;
     objects.Clear();
     };
+  void Attach()  {
+    connected++;
+    };
+  void Detach()  {
+    connected--;
+    if(connected <= 0) delete this;
+    };
   int Goal()  { return goal;};
   void SetGoal(int v1)  { goal=v1;};
   IntList objects;
 
   private:
-  int goal;
+  int goal, connected;
   };
 
 #endif

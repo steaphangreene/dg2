@@ -6,6 +6,7 @@
 #include "spell.h"
 #include "player.h"
 #include "struct.h"
+#include "ammo.h"
 #include <user/resfile.h>
 
 #define gm gmode[cmode]
@@ -17,7 +18,7 @@ extern char sprng[64];
 extern Player *p1;
 extern Screen *screen;
 extern User *user;
-extern Window mainw;
+extern Panel mainp;
 extern GMode gmode[10];
 extern char cmode;
 extern Map *curmap;
@@ -40,6 +41,13 @@ DigSample *Creature::GotYou = NULL;
 Creature::~Creature()  {
   int ctr;
   UnclaimSprite(image.SpriteNumber());
+  for(ctr=0; ctr<spell.Size(); ctr++)  {
+    if(list[spell[ctr]] != NULL)  {
+      delete ((Spell *)list[spell[ctr]]);
+      ctr--;
+      }
+    }
+  spell.Clear();
   for(ctr=0; ctr<sustained_spell.Size(); ctr++)  {
     if(list[sustained_spell[ctr]] != NULL)  {
       ((Spell *)list[sustained_spell[ctr]])->caster = NULL;
@@ -54,7 +62,8 @@ Creature::~Creature()  {
     UndoVision();
     }
   else  if(Location(0) != NULL)  {
-    if(goal.Goal() == ACTION_EXCUSED)  Location(0)->LeaveHalf(this);
+    if(goal[0] != NULL && goal[0]->Goal() == ACTION_EXCUSED)
+	Location(0)->LeaveHalf(this);
     else  Location(0)->Leave(this);
     UndoVision();
     }
@@ -94,10 +103,12 @@ void Creature::Init()  {
     cstats[gtype]->speed[TERRAIN_OCEAN] = 24;
     cstats[gtype]->speed[TERRAIN_ROCK] = 10;
     cstats[gtype]->speed[TERRAIN_SAND] = 8;
+    cstats[gtype]->speed[TERRAIN_ASHES] = 8;
     }
   stats = cstats[gtype];
   spells = 0;
   prayers = 0;
+  cw=-1;
   hit = 100;
   fatigue = 100000;
   vision = stats->vision;
@@ -114,8 +125,8 @@ void Creature::Init()  {
   dirt = -1;
   dirf = -1;
   distt = -1;
-  meleetarget = 0;
-  misiletarget = 0;
+  target = 0;
+  weap[1].range = -1;
   location[0] = NULL;
   location[1] = NULL;
   exists = 0;
@@ -133,6 +144,11 @@ void Creature::Init()  {
   selboxg[2]->FindTrueCenter();
   ClaimSprite(image.SpriteNumber());
   Waiting[thingnum] = 1;
+  int ctr;
+  for(ctr=0; ctr<12; ctr++)  {
+    goal[ctr] = NULL;
+    mission[ctr] = NULL;
+    }
   }
 
 void Creature::SetCreatureGraphic(int ctype, char *dir)  {
@@ -151,18 +167,20 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
   }
 
 Creature::Creature(int ctype, Player *pown)  {
-  if(GotYou == NULL)  GotYou = new DigSample("sounds/What.wav");
-  if(ToldYou == NULL)  ToldYou = new DigSample("sounds/Ok.wav");
+//  if(GotYou == NULL)  GotYou = new DigSample("sounds/What.wav");
+//  if(ToldYou == NULL)  ToldYou = new DigSample("sounds/Ok.wav");
   inside = new (Thing*)[2];
   inside[0] = NULL;
   inside[1] = NULL;
   type = THING_CREATURE;
   gtype = ctype;
   owner = pown;
-  image.SetWindow(mainw);
+  image.SetPanel(mainp);
   image.SetColormap(pown->GetCMap());
-  selbox.SetWindow(mainw);
+  selbox.SetPanel(mainp);
   selbox.DisableCollisions();
+  weaps.SetPanel(mainp);
+  weaps.DisableCollisions();
   Init();
   }
 
@@ -184,7 +202,7 @@ void Creature::Place(Cell *in, int fac)  {
   debug_position = 2110;
   Claimed(in);
   debug_position = 2120;
-//  in->UnClaim(this);
+  in->UnClaim(this);
   debug_position = 2130;
   location[0] = in;
   xpos = 0;
@@ -200,6 +218,7 @@ void Creature::Place(Cell *in, int fac)  {
   }
 
 void Creature::ReAlignme(int x, int y)  {
+  x=y; //UNUSED!!!
   //Changed[thingnum] = 1;
   }
 
@@ -262,12 +281,15 @@ void Creature::UpdateCondition()  {
       vision = 2;
       if(hit <= 10)  {
 	Deselect();
-//	Action tmpa(ACTION_FLEE, SafestDirection());
+	if(dirf>=0) dirf=-1;
+	if(dirt>=0 && distt<1) dirt=-1;
+//	Action *tmpa = new Action(ACTION_FLEE, SafestDirection());
 //	Do(tmpa);
 	}
       }
     if(hit <= 0 || fatigue <= -50000)  {
-      if(goal.Goal() != ACTION_EXCUSED)  goal.Done();
+      if(goal[0] == NULL || goal[0]->Goal() != ACTION_EXCUSED)
+	GoalDone();
       if(!down) Deselect();
       down = 1;
       }
@@ -340,56 +362,61 @@ void Creature::Act()  {
 //  if((inside[0] != NULL && ((Creature *)inside[0])->altitude <= Height())
 //      || (inside[1] != NULL && ((Creature *)inside[1])->altitude <= Height()))
 //    return;
-  if(exists && (meleetarget != 0))  {
+  if(exists && target != 0)  {
     { int tf = fatigue/50000;
       if(IsInWater())  fatigue -= 100;
       else  fatigue -= 50;
       if(fatigue<-100000) fatigue = -100000;
       if(tf != (fatigue/50000)) UpdateCondition();
       }
-    if(list[meleetarget] == NULL)  {
-      meleetarget = thingnum;
+    if(list[target] == NULL)  {
+      target = thingnum;
       }
-    if(frame == FRAME_WALK || frame == FRAME_LIMP)  {
-      frame=FRAME_M0_1;
-      if(meleetarget != thingnum)  {
-	MeleeAttack((Creature *)list[meleetarget]);
-	if((list[meleetarget] == NULL)
-		|| (((Creature *)list[meleetarget])->hit <= 10))  {
-	  if((goal.Goal() ==ACTION_ATTACK) && (goal.Object() ==meleetarget)) {
-	    goal.DoneFirst();
-	    EvaluateGoal();
-	    }
-	  }
-	if((list[meleetarget] == NULL)
-		|| (((Creature *)list[meleetarget])->hit <= 0))  {
-	  if((goal.Goal() == ACTION_KILL) && (goal.Object() == meleetarget)) {
-	    goal.DoneFirst();
-	    EvaluateGoal();
-	    }
-	  }
-	}
+    if((frame < FRAME_M0_1 || frame > FRAME_M0_7)
+	&& (target == thingnum || target == 0))  {
+      ResetFrame();
+      return;
       }
+    if(frame<FRAME_M0_1 || frame>FRAME_M0_7)  {
+      if(weap[1].range > 0 && InWeaponRange((Creature *)list[target], 1))
+	cw=1;
+      else if(weap[0].range>0 && InWeaponRange((Creature *)list[target], 0))
+	cw=0;
+      else { target = 0; return; }
+      }
+    if(frame == FRAME_WALK || frame == FRAME_LIMP) frame=FRAME_M0_1;
     else if(frame == FRAME_M0_1)  frame=FRAME_M0_2;
     else if(frame == FRAME_M0_2)  frame=FRAME_M0_3;
     else if(frame == FRAME_M0_3)  frame=FRAME_M0_4;
     else if(frame == FRAME_M0_4)  frame=FRAME_M0_5;
     else if(frame == FRAME_M0_5)  frame=FRAME_M0_6;
     else if(frame == FRAME_M0_6)  frame=FRAME_M0_7;
-    else if(frame == FRAME_M0_7)  {
-      ResetFrame();
-      meleetarget = 0;
+    else if(frame == FRAME_M0_7)  { ResetFrame(); target = 0; }
+    if(frame == FRAME_M0_5)  {
+      Attack((Creature *)list[target], cw);
+      if(goal[0] == NULL)  {
+	}
+      else if(target == 0 || list[target] == NULL)  {
+	GoalDoneFirst();
+	EvaluateGoal();
+	}
+      else if((((Creature *)list[target])->hit <= 10)
+	  && (goal[0]->Goal() == ACTION_ATTACK)
+	  && (goal[0]->Object() == target)) {
+	GoalDoneFirst();
+	EvaluateGoal();
+	}
+      else if((((Creature *)list[target])->hit <= 0)
+	  && (goal[0]->Goal() == ACTION_KILL)
+	  && (goal[0]->Object() == target)) {
+	GoalDoneFirst();
+	EvaluateGoal();
+	}
       }
     Changed[thingnum] = 1;
     }
 
   else  if(exists && (dirt >= 0))  {
-    { int tf = fatigue/50000;
-      if(IsInWater())  fatigue -= 20;
-      else  fatigue -= 10;
-      if(fatigue<-100000) fatigue = -100000;
-      if(tf != (fatigue/50000)) UpdateCondition();
-      }
     dirt %= 12;
     if(Location(1) == NULL && !GetPath(dirt))  {
       dirt = -1;
@@ -406,11 +433,17 @@ void Creature::Act()  {
     else  {
       Changed[thingnum] = 1;
       if((distt < 0) && (facing == dirt))  {
-	Location(0)->UnClaim(this);	// HERE!
+//	Location(0)->UnClaim(this);	// HERE!
 	location[1] = NULL;
 	distt = 0;
 	}
       if(distt > -1)  {
+	{ int tf = fatigue/50000;
+	  if(IsInWater())  fatigue -= 20;
+	  else  fatigue -= 10;
+	  if(fatigue<-100000) fatigue = -100000;
+	  if(tf != (fatigue/50000)) UpdateCondition();
+	  }
 	int steps = speed;
 	distt++;
 	if(frame == FRAME_WALK)  frame=FRAME_WALK01;
@@ -489,7 +522,7 @@ void Creature::Act()  {
 	    UndoVision();
 	    location[0] = Location(0)->Next(((dirt+1)/2)*2);
 	    location[1] = NULL;
-//	    Location(0)->UnClaim(this);
+	    Location(0)->UnClaim(this);
 	    xpos = 0;
 	    ypos = 0;
 	    distt = -1;
@@ -629,109 +662,120 @@ void Creature::Act()  {
 	}
       if(tf != (fatigue/50000)) UpdateCondition();
       }
-    if((frame%4) == 2)  {
-      frame--;
-      Changed[thingnum] = 1;
-      }
-    else  if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
-      ResetFrame();
-      Changed[thingnum] = 1;
+    if(goal[0] == NULL || (goal[0]->Goal() != ACTION_EXTINGUISH
+	&& goal[0]->Goal() != ACTION_DIG))  {
+      if((frame%4) == 2)  {
+	frame--;
+	Changed[thingnum] = 1;
+	}
+      else  if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+	ResetFrame();
+	Changed[thingnum] = 1;
+	}
       }
     }
   }
 
 void Creature::EvaluateGoal()  {
+  if(goal[0] == NULL)  return;
   if(hit<=10)  {
-    meleetarget = 0;
-    misiletarget = 0;
-    if((goal.Goal() == ACTION_ATTACK) || (goal.Goal() == ACTION_KILL)
-	|| (goal.Goal() == ACTION_PATROL)|| (goal.Goal() == ACTION_FOLLOW)
-	|| (goal.Goal() == ACTION_FOLLOW_PATH))
-      goal.Done();
+    target = 0;
+//    if((goal.Goal() == ACTION_ATTACK) || (goal.Goal() == ACTION_KILL)
+//	|| (goal.Goal() == ACTION_PATROL)|| (goal.Goal() == ACTION_FOLLOW)
+//	|| (goal.Goal() == ACTION_FOLLOW_PATH) || (goal.Goal() == ACTION_DIG)
+//	|| (goal.Goal() == ACTION_EXTINGUISH))
+//    if(goal[0]->Goal() != ACTION_NOTHING)  GoalDone();
+    ClearGoals();
+    return;
     }
-  if(meleetarget != 0)
-    if(list[meleetarget] == NULL
-		|| ((Creature *)list[meleetarget])->exists == 0)
-      meleetarget = 0;
-    else if(goal.Goal() == ACTION_KILL && goal.objects == meleetarget)
-      if(((Creature *)list[meleetarget])->hit <= 0)
-        meleetarget = 0;
-    else if(((Creature *)list[meleetarget])->hit <= 10)  {
-      meleetarget = 0;
+  if(target != 0)  {
+    if(list[target] == NULL || ((Creature *)list[target])->exists == 0)
+      target = 0;
+//    else if(goal[0]->Goal() == ACTION_KILL && goal[0]->objects == target)
+//      if(((Creature *)list[target])->hit <= 0)
+//        target = 0;
+//    else if(((Creature *)list[target])->hit <= 10)
+//      target = 0;
     }
-  if(goal.Goal() == ACTION_ATTACK)  {
-    while(goal.Goal() == ACTION_ATTACK && (list[goal.Object()] == NULL
-	|| ((Creature *)list[goal.Object()])->exists == 0
-	|| ((Creature *)list[goal.Object()])->hit <= 10))  {
-      goal.DoneFirst();
+  if(goal[0]->Goal() == ACTION_ATTACK)  {
+    while(goal[0] != NULL && goal[0]->Goal() == ACTION_ATTACK
+	&& (list[goal[0]->Object()] == NULL
+	|| ((Creature *)list[goal[0]->Object()])->exists == 0
+	|| ((Creature *)list[goal[0]->Object()])->hit <= 10))  {
+      GoalDoneFirst();
       }
     }
-  else if(goal.Goal() == ACTION_KILL)  {
-    while(goal.Goal() == ACTION_KILL && (list[goal.Object()] == NULL
-	|| ((Creature *)list[goal.Object()])->exists == 0
-	|| ((Creature *)list[goal.Object()])->hit <= 0))  {
-      goal.DoneFirst();
+  else if(goal[0]->Goal() == ACTION_KILL)  {
+    while(goal[0] != NULL && goal[0]->Goal() == ACTION_KILL
+	&& (list[goal[0]->Object()] == NULL
+	|| ((Creature *)list[goal[0]->Object()])->exists == 0
+	|| ((Creature *)list[goal[0]->Object()])->hit <= 0))  {
+      GoalDoneFirst();
       }
     }
-  if(goal.Goal() == ACTION_KILL || goal.Goal() == ACTION_ATTACK)  {
+  if(goal[0] == NULL)  return;
+  if(goal[0]->Goal() == ACTION_KILL || goal[0]->Goal() == ACTION_ATTACK)  {
     int ctr;
-    for(ctr=1; ctr < goal.objects.Size(); ctr++)  {
-      int tmpv = goal.objects[ctr];
+    for(ctr=1; ctr < goal[0]->objects.Size(); ctr++)  {
+      int tmpv = goal[0]->objects[ctr];
       if(list[tmpv] == NULL || ((Creature *)list[tmpv])->exists == 0
 		|| ((Creature *)list[tmpv])->hit <= 0)  {
-	goal.objects -= tmpv;
+	goal[0]->objects -= tmpv;
 	ctr--;
 	}
       }
-    if(goal.objects.Size() > 1)  FlipToCloserThing(goal.objects);
+    if(goal[0]->objects.Size() > 1)  FlipToCloserThing(goal[0]->objects);
+    else if(goal[0]->objects.Size() < 1) GoalDone();
     }
   }
 
 void Creature::Think()  {
   EvaluateGoal();
-  if((meleetarget != 0) || (misiletarget != 0) || (dirt >= 0) ||
-    (dirf >= 0) || (down))  return;
-  if(goal.Goal() == 0)  {
+  if((target != 0) || (dirt >= 0) || (dirf >= 0) || (down))  return;
+  if(((Creature *)Location(0))->ftemp > 0)  {
+    Action *tmpa = new Action(ACTION_EXTINGUISH, Location(0));
+    Do(tmpa);
+    }
+  if(goal[0] == NULL || goal[0]->Goal() == 0)  {
     int ctr;
     for(ctr = ((facing/2)*2); ctr < 12+((facing/2)*2); ctr+=2)  {
       if(Location(0)->Next(ctr) != NULL)  {
 	Thing *targ = Location(0)->Next(ctr)->Inside(0);
 	while(targ != NULL && ((Creature*)targ)->inside[0] != targ)  {
-	  if(owner->IsEnemy(targ) && (((Creature*)targ)->hit > 10)) {
-	    Action tmpa(ACTION_ATTACK, (Creature *)targ);
-	    goal = tmpa;
+	  if(targ->Type() == THING_CREATURE && owner->IsEnemy(targ)
+		&& ((Creature*)targ)->hit > 10) {
+	    Action *tmpa = new Action(ACTION_ATTACK, (Creature *)targ);
+	    Do(tmpa);
 	    targ = NULL;
 	    break;
 	    }
 	  else targ = ((Creature*)targ)->inside[0];
 	  }
+	if((goal[0] == NULL || goal[0]->Goal() == 0)
+		&& ((Creature *)Location(0)->Next(ctr))->ftemp > 0)  {
+	  Action *tmpa = new Action(ACTION_EXTINGUISH, Location(0)->Next(ctr));
+	  Do(tmpa);
+	  }
 	}
       }
     }
-  if(goal.Goal() == 0)  return;
-  switch(goal.Goal())  {
+  if(goal[0] == NULL || goal[0]->Goal() == 0)  return;
+  switch(goal[0]->Goal())  {
 
     case (ACTION_CAST+SPELL_INVISIBILITY):
     case (ACTION_CAST+SPELL_VISION):
     case (ACTION_CAST+SPELL_DISINTIGRATE):
     case (ACTION_CAST+PRAYER_HEAL):  {
-      int spname = goal.Goal() - ACTION_CAST;
+      int spname = goal[0]->Goal() - ACTION_CAST;
       int range = sprng[spname];
       if(range == 0) range = vision;
-      FlipToCloserThing(goal.objects);
-      if(range < 0 || DistanceTo(list[goal.objects[0]]) <= range)  {
-	if(DirectionTo(list[goal.objects[0]]) == facing)  {
-	  Spell *tmps = new Spell(this, spname, goal.objects);
-	  sustained_spell += tmps->Number();
-	  goal.DoneFirst();
-	  if(owner == p1) p1->RefigureSpellcasters();
-	  }
-	else  {
-	  Face(DirectionTo(list[goal.objects[0]]));
-	  }
-	}
-      else  {
-	Move((Cell *)list[goal.objects[0]]->Location(0)->Location(0));
+      FlipToCloserThing(goal[0]->objects);
+
+      if(Approach(list[goal[0]->Object()], range))  {
+	Spell *tmps = new Spell(this, spname, goal[0]->objects);
+	sustained_spell += tmps->Number();
+	GoalDoneFirst();
+	if(owner == p1) p1->RefigureSpellcasters();
 	}
       }break;
 
@@ -742,141 +786,98 @@ void Creature::Think()  {
     case (ACTION_CAST+SPELL_WALL_OF_STONE):
     case (ACTION_CAST+SPELL_ARROWS):  {
 //      printf("Creature casting!\r\n");
-      int spname = goal.Goal() - ACTION_CAST;
+      int spname = goal[0]->Goal() - ACTION_CAST;
       int range = sprng[spname];
       if(range == 0) range = vision;
-      if(range < 0 || DistanceTo(list[goal.objects[0]]) <= range)  {
-	if(DirectionTo(list[goal.objects[0]]) == facing)  {
-	  Spell *tmps = new Spell(this, spname, goal.objects);
-	  sustained_spell += tmps->Number();
-	  goal.Done();
-	  if(owner == p1) p1->RefigureSpellcasters();
-	  }
-	else  {
-	  Face(DirectionTo(list[goal.objects[0]]));
-	  }
-	}
-      else  {
-	Move((Cell *)list[goal.objects[0]]->Location(0)->Location(0));
+      if(Approach(list[goal[0]->Object()], range))  {
+	Spell *tmps = new Spell(this, spname, goal[0]->objects);
+	sustained_spell += tmps->Number();
+	GoalDone();
+	if(owner == p1) p1->RefigureSpellcasters();
 	}
       }break;
 
     case ACTION_ATTACK:  {
-      if(hit<=10)  goal.Done();
-      if((list[goal.Object()] == NULL)
-	    || (((Creature *)list[goal.Object()])->exists == 0))  {
-	goal.DoneFirst();
+      if(hit<=10) { GoalDone(); break; }
+      if((list[goal[0]->Object()] == NULL)
+	    || (((Creature *)list[goal[0]->Object()])->exists == 0))  {
+	GoalDoneFirst();
 	EvaluateGoal();
+	break;
 	}
-      else  if(((Creature *)list[goal.Object()])->hit <= 10)  {
-	if(facing == DirectionTo((Creature *)list[goal.Object()]))  {
-	  if(InMeleeRange((Creature *)list[goal.Object()]))  {
-	    SwingAt((Creature *)list[goal.Object()]);
-            if(((Creature *)list[goal.Object()])->hit <= 10)  {
-	      goal.DoneFirst();
-	      EvaluateGoal();
+      else  if(((Creature *)list[goal[0]->Object()])->hit > 10)  {
+	if(facing == DirectionTo((Creature *)list[goal[0]->Object()]))  {
+	  if(InWeaponRange((Creature *)list[goal[0]->Object()], 0))  {
+            if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
+	      ResetFrame();
+              Changed[thingnum] = 1;
 	      }
+	    Engage((Creature *)list[goal[0]->Object()]);
 	    }
 	  else  {
-	    Move(((Creature *)list[goal.Object()])->Location(0));
+	    Move(((Creature *)list[goal[0]->Object()])->Location(0));
 	    }
 	  }
 	else  {
-	  Face(DirectionTo((Creature *)list[goal.Object()]));
+	  Face(DirectionTo((Creature *)list[goal[0]->Object()]));
 	  }
 	}
       else  {
-	if(InMeleeRange((Creature *)list[goal.Object()]))  {
-          if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
-	    ResetFrame();
-	    Changed[thingnum] = 1;
-	    }
-	  if(facing == DirectionTo((Creature *)list[goal.Object()]))  {
-	    SwingAt((Creature *)list[goal.Object()]);
-            if(((Creature *)list[goal.Object()])->hit <= 10)  {
-	      goal.DoneFirst();
-	      EvaluateGoal();
-	      }
-	    }
-	  else  {
-	    Face(DirectionTo((Creature *)list[goal.Object()]));
-	    }
-	  }
-	else  {
-	  Move(((Creature *)list[goal.Object()])->Location(0));
-	  }
+	GoalDoneFirst();
+ 	EvaluateGoal();
 	}
       }  break;
 
     case ACTION_KILL:  {
-      if(hit<=10)  goal.Done();
-      if((list[goal.Object()] == NULL)
-	    || (((Creature *)list[goal.Object()])->exists == 0))  {
-	goal.DoneFirst();
+      if(hit<=10) { GoalDone(); break; }
+      if((list[goal[0]->Object()] == NULL)
+	    || (((Creature *)list[goal[0]->Object()])->exists == 0))  {
+	GoalDoneFirst();
 	EvaluateGoal();
+	break;
 	}
-      else  if(((Creature *)list[goal.Object()])->hit <= 0)  {
-	if(InMeleeRange((Creature *)list[goal.Object()]))  {
+      else  if(((Creature *)list[goal[0]->Object()])->hit >= 0)  {
+	if(InWeaponRange((Creature *)list[goal[0]->Object()], 0))  {
           if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
 	    ResetFrame();
 	    Changed[thingnum] = 1;
 	    }
-	  if(facing == DirectionTo((Creature *)list[goal.Object()]))  {
-	    SwingAt((Creature *)list[goal.Object()]);
-            if(((Creature *)list[goal.Object()])->hit <= 0)  {
-	      goal.DoneFirst();
+	  if(facing == DirectionTo((Creature *)list[goal[0]->Object()]))  {
+	    Engage((Creature *)list[goal[0]->Object()]);
+            if(((Creature *)list[goal[0]->Object()])->hit <= 0)  {
+	      GoalDoneFirst();
 	      EvaluateGoal();
+	      break;
 	      }
 	    }
 	  else  {
-	    Face(DirectionTo((Creature *)list[goal.Object()]));
+	    Face(DirectionTo((Creature *)list[goal[0]->Object()]));
 	    }
 	  }
 	else  {
-	  Move(((Creature *)list[goal.Object()])->Location(0));
-	  }
-	}
-      else  {
-	if(InMeleeRange((Creature *)list[goal.Object()]))  {
-          if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
-	    ResetFrame();
-            Changed[thingnum] = 1;
-	    }
-	  if(facing == DirectionTo((Creature *)list[goal.Object()]))  {
-	    SwingAt((Creature *)list[goal.Object()]);
-            if(((Creature *)list[goal.Object()])->hit <= 0)  {
-	      goal.DoneFirst();
-	      EvaluateGoal();
-	      }
-	    }
-	  else  {
-	    Face(DirectionTo((Creature *)list[goal.Object()]));
-	    }
-	  }
-	else  {
-	  Move(((Creature *)list[goal.Object()])->Location(0));
+	  Move(((Creature *)list[goal[0]->Object()])->Location(0));
 	  }
 	}
       }  break;
 
     case ACTION_TURN:  {
-      if((goal.Object() < 0) || (goal.Object() == facing))  {
-	goal.Done();
-	return;
+      if((goal[0]->Object() < 0) || (goal[0]->Object() == facing))  {
+	GoalDone();
+	break;
 	}
-      Face(goal.Object());
+      Face(goal[0]->Object());
       }  break;
 
     case ACTION_FOLLOW:  {
-      if(list[goal.Object()] == NULL
-		|| ((Creature *)list[goal.Object()])->exists == 0)  {
-	goal.DoneFirst();
+      if(list[goal[0]->Object()] == NULL
+		|| ((Creature *)list[goal[0]->Object()])->exists == 0)  {
+	GoalDoneFirst();
 	}
       else  {
-	if(!(location[0] == (((Creature *)list[goal.Object()])->location[0])
+	if(!(location[0] == (((Creature *)list[goal[0]->Object()])->location[0])
 		|| Location(0)->IsNextTo(
-		((Creature *)list[goal.Object()])->Location(0))))  {
-	  Move(((Creature *)list[goal.Object()])->Location(0));
+		((Creature *)list[goal[0]->Object()])->Location(0))))  {
+	  Move(((Creature *)list[goal[0]->Object()])->Location(0));
 	  }
 	}
       } break;
@@ -886,25 +887,80 @@ void Creature::Think()  {
 	  && Location(0)->Enter(this, altitude, height, 0, 0))  {
 	Location(0)->UnClaim(this);
 	ThankYou();
-	goal.Done();
+	GoalDone();
 	}
       else Waiting[thingnum] = 1;
 //      printf("Checking, got deb_loc of %d!\n", debug_position);
       } break;
 
+    case ACTION_DIG:  {
+      if(Approach(list[goal[0]->Object()], 1))  {
+	if(frame == FRAME_M0_1)  { frame=FRAME_M0_2; }
+	else if(frame == FRAME_M0_2)  { frame=FRAME_M0_3; }
+	else if(frame == FRAME_M0_3)  { frame=FRAME_M0_4; }
+	else if(frame == FRAME_M0_4)  {
+	  frame=FRAME_M0_5;
+	  if(list[goal[0]->Object()]->BurnFeul(10) <= 0)  {
+	    ((Cell*)list[goal[0]->Object()])->SetTerrain(TERRAIN_DIRT);
+	    }
+	  }
+	else if(frame == FRAME_M0_5)  { frame=FRAME_M0_6; }
+	else if(frame == FRAME_M0_6)  { frame=FRAME_M0_7; }
+	else if(frame == FRAME_M0_7)  {
+	  ResetFrame();
+	  if(((Cell*)list[goal[0]->Object()])->Terrain() == TERRAIN_DIRT)
+	    GoalDoneFirst();
+	  }
+	else { frame=FRAME_M0_1; }
+	Changed[thingnum] = 1;
+	}
+      } break;
+
+    case ACTION_LOOK:  {
+      int dir = DirectionTo(list[goal[0]->Object()]->Location(0)->Location(0));
+      if(facing != dir) Face(dir);
+      GoalDone();
+      } break;
+
+    case ACTION_EXTINGUISH:  {
+      if(Approach(list[goal[0]->Object()], 1))  {
+//	printf("Douse in %d\n", frame);
+	if(frame == FRAME_M0_1)  { frame=FRAME_M0_2; }
+	else if(frame == FRAME_M0_2)  { frame=FRAME_M0_3; }
+	else if(frame == FRAME_M0_3)  { frame=FRAME_M0_4; }
+	else if(frame == FRAME_M0_4)  {
+	  frame=FRAME_M0_5;
+	  list[goal[0]->Object()]->Heat(-1, 500);
+	  location[0]->Heat(-1, 500);
+//	  printf("Dousing!\n");
+	  }
+	else if(frame == FRAME_M0_5)  { frame=FRAME_M0_6; }
+	else if(frame == FRAME_M0_6)  { frame=FRAME_M0_7; }
+	else if(frame == FRAME_M0_7)  {
+	  ResetFrame();
+	  if(((Creature*)list[goal[0]->Object()])->ftemp <= 0
+		&& ((Creature*)Location(0))->ftemp <= 0)
+	    GoalDoneFirst();
+	  }
+	else { frame=FRAME_M0_1; }
+//	printf("Douse out %d\n", frame);
+	Changed[thingnum] = 1;
+	}
+      } break;
+
     case ACTION_FOLLOW_PATH:  {
-      if(goal.objects.Size() > 0)  {
-	if(list[goal.Object()] == NULL
-		|| ((Creature *)list[goal.Object()])->exists == 0)  {
-	  goal.Done();
+      if(goal[0]->objects.Size() > 0)  {
+	if(list[goal[0]->Object()] == NULL
+		|| ((Creature *)list[goal[0]->Object()])->exists == 0)  {
+	  GoalDone();
 	  }
 	else  {
-	  if(location[0]->Number() != goal.Object())  {
-	    if(GetPath(DirectionTo((Cell *)list[goal.Object()])))
-	      Move((Cell *)list[goal.Object()]);
+	  if(location[0]->Number() != goal[0]->Object())  {
+	    if(GetPath(DirectionTo((Cell *)list[goal[0]->Object()])))
+	      Move((Cell *)list[goal[0]->Object()]);
 	    }
 	  else  {
-	    goal.objects.Clear();
+	    goal[0]->objects.Clear();
 	    exploring = 0;
 	    }
 	  }
@@ -942,7 +998,7 @@ void Creature::Think()  {
 	  }
 	else  {
 	  exploring+=(1+(facing&1));
-	  if(exploring > EXPLORE_FOR)  goal.Done();
+	  if(exploring > EXPLORE_FOR)  GoalDone();
 	  else  {
 	    if(GetPath(facing))  {
 	      Move((Cell *)Location(0)->Next(facing));
@@ -950,7 +1006,7 @@ void Creature::Think()  {
 	    else  if(Location(0)->Next(facing) != NULL)  {
 	      Move(Location(0)->Next(facing)->Next(facing));
 	      exploring+=(1+(facing&1));
-	      if(exploring > EXPLORE_FOR)  goal.Done();
+	      if(exploring > EXPLORE_FOR)  GoalDone();
 	      }
 	    }
 	  }
@@ -958,9 +1014,9 @@ void Creature::Think()  {
       } break;
 
     case ACTION_FLEE:  {
-      if(Location(0)->Next(goal.Object()) == NULL)  goal.Done();
+      if(Location(0)->Next(goal[0]->Object()) == NULL)  GoalDone();
       else  {
-	Move(Location(0)->Next(goal.Object()));
+	Move(Location(0)->Next(goal[0]->Object()));
 	}
       }	break;
 
@@ -973,56 +1029,59 @@ void Creature::Think()  {
 	  }
 	}
       sustained_spell.Clear();
-      goal.Done();
+      GoalDone();
       }	break;
 
     case ACTION_GO:  {
-      if((goal.Object() == 0) || (list[goal.Object()] == NULL)
-		|| ((list[goal.Object()] == Location(0))
+      if((goal[0]->Object() == 0) || (list[goal[0]->Object()] == NULL)
+		|| ((list[goal[0]->Object()] == Location(0))
 		&& (NULL == location[1])))  {
-	goal.Done();
+	GoalDone();
         if((frame != FRAME_WALK) && (frame != FRAME_LIMP))  {
 	  ResetFrame();
           Changed[thingnum] = 1;
 	  }
 	return;
 	}
-//      if(Move(((Creature *)list[goal.Object()])->Location(0)))
-      if(Move(((Cell *)list[goal.Object()])))
-	goal.Done();
-      if(dirt == -1)  goal.Done();
+//      if(Move(((Creature *)list[goal[0]->Object()])->Location(0)))
+      if(Move(((Cell *)list[goal[0]->Object()])))
+	GoalDone();
+      if(dirt == -1)  GoalDone();
       }	break;
 
     default:  {						//BUILD!!
-      int mat, st = goal.Goal() - ACTION_BUILD;
+      int mat, st = goal[0]->Goal() - ACTION_BUILD;
       if(st < 0)  break; //Exit(1, "Bad action for creature (%d)\r\n", st);
       mat = st%MATERIAL_MAXBUILD;
       st /= MATERIAL_MAXBUILD;
 //      printf("Building %d out of %d!\r\n", st, mat);
-      FlipToCloserThing(goal.objects);
-      if(DistanceTo(list[goal.objects[0]]) == 0)  {
+      FlipToCloserThing(goal[0]->objects);
+      if(DistanceTo(list[goal[0]->Object()]) == 0)  {
 	Move(Location(0)->Next(0));
 	}
-      else if(DistanceTo(list[goal.objects[0]]) == 1)  {
-	if(DirectionTo(list[goal.objects[0]]) == facing)  {
-	  Structure *tmps = new Structure(st, mat);
-	  if(!(tmps->Place((Cell*)list[goal.objects[0]]))) delete tmps;
-	  goal.DoneFirst();
-	  }
-	else  {
-	  Face(DirectionTo(list[goal.objects[0]]));
-	  }
-	}
-      else  {
-	Move((Cell *)list[goal.objects[0]]->Location(0)->Location(0));
+      else if(Approach(list[goal[0]->Object()], 1))  {
+	Structure *tmps = new Structure(st, mat);
+	if(!(tmps->Place((Cell*)list[goal[0]->Object()]))) delete tmps;
+	GoalDoneFirst();
 	}
       }break;
     }
   }
 
-void Creature::Do(const Action &in)  {
-  if(goal.Goal() == ACTION_EXCUSED)  return;
-  if((!multi) || (!talking)) goal = (Action &)in;
+void Creature::Do(const Action *in)  {
+  if(goal[0] != NULL && goal[0]->Goal() == ACTION_EXCUSED)  return;
+//  if((!multi) || (!talking))  {
+    if(((Action*)in)->Goal() == ACTION_STOP)  {
+      target = 0;
+      ClearGoals();
+      }
+    else {
+      ClearGoals();
+      goal[0] = (Action *)in;
+      goal[0]->Attach();
+      }
+/*
+    }
   else  {
 //    printf("Creating one!\r\n");
     int tmp, size, ctr;
@@ -1041,8 +1100,9 @@ void Creature::Do(const Action &in)  {
       }
     sendind = ctr;
 //    printf("Created one, (%d, %d)!\r\n", ((Action &)in).Goal(),
-//	((Action &)in).objects[0]);
+//	((Action &)in).Object());
     }
+*/
   Waiting[thingnum] = 1;
   }
 
@@ -1054,6 +1114,7 @@ void Creature::updateme()  {
   if(!(Location(0)->InView()))  {
     image.Erase();
     selbox.Erase();
+    weaps.Erase();
     }
   else  {
     if(exists)  {
@@ -1078,9 +1139,18 @@ void Creature::updateme()  {
 	selbox.UseImage(selboxg[gm.xstep>>5]);
 	image.SetPriority(100000-(Height()));
 	selbox.SetPriority(100001-(Height()));
-	image.Move(x, y, ((facing<<8)/12));
+	weaps.SetPriority(100002-(Height()));
+	image.Move(x, y, ((facing<<16)/12));
 	if(selected) selbox.Move(x, y);
 	else selbox.Erase();
+	if(cw>=0 && weap[cw].image[0][gm.xstep>>5] != NULL) {
+	  weaps.SetImage(weap[cw].image[frame >= FRAME_M0_1
+		&& frame <= FRAME_M0_7][gm.xstep>>5]);
+	  //weaps.UseImage(weap[cw].image[frame >= FRAME_M0_1
+		//&& frame <= FRAME_M0_7][gm.xstep>>5]);
+	  weaps.Move(x, y, ((facing<<16)/12));
+	  }
+	else weaps.Erase();
         }
       }
     }
@@ -1462,31 +1532,29 @@ void Creature::DamageFull(int dam)  {
   if(fatigue>1000*hit) fatigue = 1000*hit;
   }
 
-void Creature::MeleeAttack(Creature *target)  {
-  if(!(InMeleeRange(target)))  return;
-  target->Strike(this, stats->melee, meleeweap.pdam*stats->str,
-	meleeweap.bdam*stats->str);
+void Creature::Attack(Creature *target, int w)  {
+//  printf("Attack with %d\n", w);
+  if(!(InWeaponRange(target, w)))  return;
+  if(weap[w].ammo < 0)  {
+    target->Strike(this, stats->melee, weap[w].pdam*stats->str,
+	weap[w].bdam*stats->str);
+    }
+  else  {
+    new Ammo(weap[w].ammo, this, target, 32, stats->missile,
+        weap[w].pdam*stats->str, weap[w].bdam*stats->str);
+    }
   }
 
-int Creature::InMeleeRange(Creature *target)  {
-  return (DistanceTo(target) <= (meleeweap.range)
-	&& target->Height() > altitude-(height/2)
-	&& target->altitude < Height()+(height/2));
-//	<= (stats->reach+meleeweap.range));
-  }
-
-void Creature::MisileAttack(Creature *target)  {
-  if(!(InMisileRange(target)))  return;
-  target->Strike(this, stats->misile, misileweap.pdam*stats->str,
-	misileweap.bdam*stats->str);
-  }
-
-int Creature::InMisileRange(Creature *target)  {
-  return (DistanceTo(target) <= (misileweap.range));
-//	<= (stats->reach+misileweap.range));
+int Creature::InWeaponRange(Creature *targ, int w)  {
+//  printf("In %d's weapon %d's range of %d?\n", thingnum, w, weap[w].range);
+  return (DistanceTo(targ) <= (weap[w].range)
+//	<= (stats->reach+weap[w].range)
+	&& targ->Height() > altitude-(height/2)
+	&& targ->altitude < Height()+(height/2));
   }
 
 void Creature::Strike(Creature *attacker, int skill, int pdam, int bdam)  {
+  skill=skill; //UNUSED!!!
   Punch->Play();
   int dam = bdam;
   if(stats->body < 1)  dam = 500+stats->armor;
@@ -1497,23 +1565,20 @@ void Creature::Strike(Creature *attacker, int skill, int pdam, int bdam)  {
     }
   if(dam < 0)  dam = 0;
   Damage(dam);
-//  if((goal.Goal() == 0) && (hit > 10))  {
-//  if((meleetarget == NULL || meleetarget == this) && hit > 10)  {
-  if((goal.Goal() != ACTION_ATTACK) && (goal.Goal() != ACTION_KILL)
-	&& (hit > 10) && (goal.Goal() != ACTION_EXCUSED))  {
+//  if((goal[0]->Goal() == 0) && (hit > 10))  {
+//  if((target == NULL || target == this) && hit > 10)  {
+  if(goal[0] == NULL || (goal[0]->Goal() != ACTION_ATTACK
+	&& goal[0]->Goal() != ACTION_KILL
+	&& hit > 10 && goal[0]->Goal() != ACTION_EXCUSED))  {
     if(attacker->type == THING_CREATURE)  {
-      Action tmpa(ACTION_ATTACK, attacker);
-      goal = tmpa;
+      Action *tmpa = new Action(ACTION_ATTACK, attacker);
+      Do(tmpa);
       }
     }
   }
 
-void Creature::SwingAt(Creature *targ)  {
-  if(targ != this)  meleetarget = targ->Number();
-  }
-
-void Creature::ShootAt(Creature *targ)  {
-  if(targ != this)  misiletarget = targ->Number();
+void Creature::Engage(Creature *targ)  {
+  if(targ != this)  target = targ->Number();
   }
 
 void Creature::Face(int dirto)  {
@@ -1606,6 +1671,20 @@ void Creature::LearnSpell(int sp)  {
   else prayers |= (1 << (sp-32));
   }
 
+int Creature::AddWeapon(Weapon &w)  {
+  if(w.range > weap[0].range)  {
+//    printf("adding first as %d to %d\n", w.range, thingnum);
+    weap[1] = weap[0];
+    weap[0] = w;
+    cw = 0;
+    }
+  else {
+    weap[1] = w;
+    cw = 1;
+    }
+  return (1==1);
+  }
+
 void Creature::GetOwnStats()  {
   if(stats == cstats[gtype])  stats = new Statistics(*stats);
   }
@@ -1617,15 +1696,15 @@ int Creature::IsInWater()  {
   }
 
 int Creature::ExcuseMe(char dir)  {
+  return (1==2);
 //  printf("Excuse Me!!!\n");
-  if(meleetarget > 0  || misiletarget > 0 ||
-	dirt != -1 || dirf != -1 || goal.Goal() != ACTION_NOTHING)
+  if(target > 0 || dirt != -1 || dirf != -1 || goal[0]->Goal() != ACTION_NOTHING)
     return (1==2);
 //  if(!(Location(0)->Location(0)->Claimed(this)))  return(1==2);
 //  Location(0)->Location(0)->UnClaimHalf(this);
   Location(0)->Location(0)->LeaveHalf(this);
-  Action tmpa(ACTION_EXCUSED);
-  goal = tmpa;
+  Action *tmpa = new Action(ACTION_EXCUSED);
+  Do(tmpa);
   Waiting[thingnum] = 1;
   return (1==1);
   }
@@ -1635,3 +1714,63 @@ int Creature::ThankYou()  {
 //  location[0]->Enter(this, altitude, height, height, height);
   return (1==1);
   }
+
+int Creature::Approach(Thing *targ, int range)  {
+  if(DistanceTo(targ) == 0)  return(1==1);
+  if(DirectionTo(targ) == facing)  {
+    if(DistanceTo(targ) <= range)  {
+      return(1==1);
+      }
+    else if(DistanceTo(targ) == (range+1))  {
+      if(GetPath(facing&254))
+	Move(Location(0)->Location(0)->Next(facing&254));
+      else
+	Move(Location(0)->Location(0)->Next((facing&254)+2));
+      }
+    else {
+//      Move(Location(0)->Location(0)->Next(facing));
+      Move(targ->Location(0));
+      }
+    }
+  else  {
+    Face(DirectionTo(targ));
+    }
+  return(1==2);
+  }
+
+void Creature::ClearGoals()  {
+  int ctr;
+  for(ctr=0; ctr<12; ctr++)  {
+    if(goal[ctr] != NULL) goal[ctr]->Detach();
+    goal[ctr] = NULL;
+    }
+  }
+
+void Creature::GoalAbort()  {
+  if(goal[0] == NULL)  return;
+  int ctr;
+  goal[0]->Detach(); 
+  for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
+  goal[11] = NULL;
+  }
+
+void Creature::GoalDone()  {
+  if(goal[0] == NULL)  return;
+  int ctr;
+  goal[0]->Done();
+  goal[0]->Detach();
+  for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
+  goal[11] = NULL;
+  }
+
+void Creature::GoalDoneFirst()  {
+  if(goal[0] == NULL)  return;
+  int ctr;
+  goal[0]->DoneFirst();
+  if(goal[0]->Goal() == ACTION_NOTHING)  {
+    goal[0]->Detach();
+    for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
+    goal[11] = NULL;
+    }
+  }
+

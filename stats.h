@@ -20,7 +20,7 @@ class Statistics  {
     armor = 0; 
 
     siege = 0;
-    misile = 0;
+    missile = 0;
     melee = 1;
     block = 0;
     shield = 1;
@@ -45,7 +45,7 @@ class Statistics  {
   //Skills
   char siege;
   char melee;
-  char misile;
+  char missile;
   char block;
   char shield;
   char dodge;

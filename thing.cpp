@@ -48,6 +48,7 @@ void Thing::ClearTalk()  {
 
 int Thing::Interp(char *buf)  {
   int ret = 0, ind, size, tmpn, tmpg, tmps, tmpv, ctr;
+/*
   memcpy(&size, buf, 4);
 
 //  printf("Interpreting one, size = %d\r\n", size);
@@ -72,10 +73,12 @@ int Thing::Interp(char *buf)  {
 //    printf("Set one creature's goal to (%d, %d)!\r\n", tmpg, tmpv);
     }
 //  printf("Done!\r\n");
+*/
   return(ret);
   }
 
 void Thing::Talk()  {
+/*
   int tmp = sendind;
   memcpy(sendbuf, &tmp, 4);
 
@@ -85,16 +88,19 @@ void Thing::Talk()  {
   net.Send(sendbuf, sendind);
 //  printf("Sent One, size = %d!\r\n", tmp);
   sendind = 4;
+*/
   }
 
 int Thing::Listen()  {
   int ret;
+/*
 //  printf("Listening\r\n");
   char *buf = (char *)net.Receive();
   while(buf == NULL)  buf = (char *)net.Receive();
 //  printf("Interping other!\r\n");
   ret = Interp(buf);
   delete buf;
+*/
   return ret;
   }
 
@@ -113,6 +119,9 @@ Thing *Thing::FindBySpriteNumber(int spnum)  {
 Thing::Thing()  {
   altitude = 0;
   height = 0;
+  ftemp = 0;
+  fresist = 100;
+  ffeul = 100;
   inside = NULL;
   location[0] = NULL;
   location[1] = NULL;
@@ -243,6 +252,7 @@ void Thing::ReScaleme()  {
   }
 
 void Thing::ReAlignme(int x, int y)  {
+  if(x==y); //UNUSED!!!
   }
 
 void Thing::Select()  {
@@ -260,7 +270,7 @@ void Thing::tick()  {
 //    if((ctr & MOUSE_UPDATE_INTERVAL) == MOUSE_UPDATE_INTERVAL)
 //      screen->Refresh();
     if(list[ctr] != NULL)  {
-      if((ctr & 15) == (ticker & 15))  {
+      if((ctr & 63) == (ticker & 63))  {
         Waiting[ctr] = 0;
         list[ctr]->tickme();
         }
@@ -273,6 +283,32 @@ void Thing::tick()  {
   }
 
 void Thing::tickme()  {
+  if((ticker & 255) == (thingnum & 255))  {
+    if(ftemp>0)  Heat(-1, 500);
+    }
+  if(ftemp <= fresist)  {
+//    Changed[thingnum] = 0;
+    Waiting[thingnum] = 0;
+    return;  
+    }
+  if(ffeul<1)  {
+    ftemp = 0;
+    fresist = 32767;
+    if(type == THING_CELL) ((Cell*)this)->terrain = TERRAIN_ASHES;
+    Changed[thingnum] = 1;
+    return;
+    }
+  --ffeul;
+  Location(0)->StrikeAllIn(Location(0), 200, ftemp, ftemp<<1);
+  if(fresist >= ffeul)  fresist = ffeul-1;
+  if(ftemp > ffeul)  ftemp = ffeul;
+  Waiting[thingnum] = 8;
+  int ctr;
+  ctr = (random()%6) << 1;
+  if(Location(0)->Next(ctr) != NULL)  {
+    Location(0)->Next(ctr)->Heat(5, ftemp);
+    Location(0)->Next(ctr)->StrikeAllIn(Location(0), 200, ftemp>>2, ftemp>>1);
+    }  
   }
 
 void Thing::updateme()  {
@@ -290,13 +326,13 @@ void Thing::ForceEnter(Thing *in)  {
   }
 
 int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
-  debug_position = 5500;
+//  debug_position = 5500;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
     Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
-  debug_position = 5510;
+//  debug_position = 5510;
   if(in->location[0] == NULL)  {
     if(inside[0] == NULL)  {
       inside[0] = in;
@@ -309,12 +345,12 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
       return inside[0]->Enter(in, alt, ht, up, down);
       }
     }
-  debug_position = 5520;
+//  debug_position = 5520;
   if(Height() > alt+up)  {
     in->altitude++;	//    printf("Climb Up!\r\n");
     return (1==2);
     }
-  debug_position = 5530;
+//  debug_position = 5530;
   if((inside[0] != NULL && inside[1] != NULL)
 	&& (inside[0] != in && inside[1] != in))  {
     if(inside[0] != inside[1]) return (1==2);
@@ -337,18 +373,18 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
       }
     else return (inside[0]->Enter(in, alt, ht, up, down));
     }
-  debug_position = 5560;
+//  debug_position = 5560;
   if(Height() < alt-down)  {
-    debug_position = 5561;
+//    debug_position = 5561;
     if(in->altitude > (Location(0)->Location(0)->WaterLevel() - in->height)) {
-      debug_position = 5562;
+//      debug_position = 5562;
       in->altitude--;	//      printf("Climb Down!\r\n");
-      debug_position = 5563;
+//      debug_position = 5563;
       return (1==2);
       }
-    debug_position = 5564;
+//    debug_position = 5564;
     }
-  debug_position = 5570;
+//  debug_position = 5570;
   inside[0] = in;
   inside[1] = in;
   Cell *tmpc[2];
@@ -359,7 +395,7 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
   in->Fall();
   in->location[0] = tmpc[0];
   in->location[1] = tmpc[1];
-  debug_position = 5580;
+//  debug_position = 5580;
 
 //  in->altitude = Height();	//  printf("Done Entering!\r\n");
 //  if(Location(0)->Location(0)->WaterDepth() >= in->height)
@@ -369,18 +405,18 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
     tmpc->Damage(5);
     }
 //  printf("Entered at height %d.\r\n", in->altitude);
-  debug_position = 5590;
+//  debug_position = 5590;
   return (1==1);
   }
 
 int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
-  debug_position = 5600;
+//  debug_position = 5600;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
 //    Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
-  debug_position = 5610;
+//  debug_position = 5610;
   if(in->location[0] == NULL)  {
     if(inside[0] == NULL)  {
       return (1==1);
@@ -390,12 +426,12 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
       return inside[0]->CanEnter(in, alt, ht, up, down);
       }
     }
-  debug_position = 5620;
+//  debug_position = 5620;
   if(Height() > alt+up)  {
     in->altitude++;	//    printf("Climb Up!\r\n");
     return (1==2);
     }
-  debug_position = 5630;
+//  debug_position = 5630;
   if((inside[0] != NULL && inside[1] != NULL)
 	&& (inside[0] != in && inside[1] != in))  {
     if(inside[0] != inside[1]) return (1==2);
@@ -413,14 +449,14 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
       }
     else return (inside[0]->CanEnter(in, alt, ht, up, down));
     }
-  debug_position = 5660;
+//  debug_position = 5660;
   if(Height() < alt-down)  {
     if(in->altitude > (Location(0)->Location(0)->WaterLevel() - in->height)) {
       in->altitude--;	//      printf("Climb Down!\r\n");
       return (1==2);
       }
     }
-  debug_position = 5690;
+//  debug_position = 5690;
   return (1==1);
   }
 
@@ -580,5 +616,18 @@ void Thing::FlipToCloserThing(IntList &in)  {
       }
     }
   if(best != 0)  in.RotateToElement(best);
+  }
+
+void Thing::Heat(int temp, int max)  {
+  if(Inside(0) != NULL)  Inside(0)->Heat(temp, max);
+  if(type != THING_CELL && type != THING_STRUCT)  return;
+  if(temp > 0 && (ffeul < 1 || ftemp > max))  return;
+  if((ftemp > fresist) + (ftemp > 0) != 
+	((ftemp+temp) > fresist) + ((ftemp+temp) > 0))
+    Changed[thingnum] = 1;
+  ftemp += temp;
+  if(ftemp > max)  ftemp = max;
+  if(ftemp < 0)  ftemp = 0;
+  if(ftemp > ffeul)  ftemp = ffeul;
   }
 

@@ -6,10 +6,10 @@
 Graphic *Ammo::ammog[AMMO_MAX];
 int Ammo::grinit = 0;
 
-extern Window mainw;
+extern Panel mainp;
 extern Map *curmap;
 extern GMode gmode[10];
-extern int cmode;
+extern char cmode;
 
 #define gm gmode[cmode]
 
@@ -30,26 +30,28 @@ void Ammo::Create(int gnum, Cell *orig, Cell *dest, int speed)  {
   if(speed > 59) speed = 59;
   location[0] = ((Cell *)orig->Location(0)->Location(0));
   location[1] = ((Cell *)dest->Location(0)->Location(0));
-  ((Ammo *)location[0])->spell += thingnum;
-  int x = (dest->XCoord() - orig->XCoord())*8;
-  int y = (orig->YCoord() - dest->YCoord())*15;
-  double da = atan2((double)y, (double)x);
-  xx = ((double)speed)*cos(da);
-  yy = -((double)speed)*sin(da);
-  da *= (double)128;
-  da /= M_PI;
-  int ang = (int)da;
-  ang += 1024;
-  ang &= 255;
-  pic = ammog[gnum]->Rotated(ang);
-  pic.Trim();
-  image.SetWindow(mainw);
-  image.DisableCollisions();
-  Changed[thingnum] = 1;
+  if(location[0] != location[1])  {
+    ((Ammo *)location[0])->spell += thingnum;
+    int x = (dest->XCoord() - orig->XCoord())*8;
+    int y = (orig->YCoord() - dest->YCoord())*15;
+    double da = atan2((double)y, (double)x);
+    xx = ((double)speed)*cos(da);
+    yy = -((double)speed)*sin(da);
+    da *= (double)32768;
+    da /= M_PI;
+    int ang = (int)da;
+    ang += 1024;
+    ang &= 65535;
+    pic = ammog[gnum]->Rotated(ang);
+    pic.Trim();
+    image.SetPanel(mainp);
+    image.DisableCollisions();
+    Changed[thingnum] = 1;
+    yp = (double)0;
+    xp = (double)0;
+    gsize = 0;
+    }
   Waiting[thingnum] = 1;
-  yp = (double)0;
-  xp = (double)0;
-  gsize = 0;
   }
 
 Ammo::~Ammo()  {
@@ -58,6 +60,15 @@ Ammo::~Ammo()  {
   }
 
 void Ammo::tickme()  {
+  if(location[0] == location[1])  {
+    Waiting[thingnum] = 0;
+    Changed[thingnum] = 0;
+    if(skill >= 0)  {
+      ((Creature*)target)->Strike((Creature*)source, skill, pdam, bdam);
+      }
+    delete this;
+    return;
+    }
   xp += xx;
   yp += yy;
   Waiting[thingnum] = 1;
@@ -94,14 +105,19 @@ void Ammo::tickme()  {
   }
 
 void Ammo::updateme()  {
-  if(gsize != gm.xstep)  {
-    gsize = gm.xstep;
-    ReScaleme();
-    }
-  if(location[0]->InView())
+  if(location[0] != location[1])  {
+    if(gsize != gm.xstep)  {
+      gsize = gm.xstep;
+      ReScaleme();
+      }
+    if(location[0]->InView())
 	image.Move(location[0]->XPos()+(int)((xp+0.5)/(64/gm.xstep)),
 	location[0]->YPos()+(int)((yp+0.5)/(64/gm.xstep)));
-  else image.Erase();
+    else image.Erase();
+    }
+  else  {
+    Waiting[thingnum] = 1;
+    }
   }
 
 void Ammo::ReScaleme()  {
@@ -111,6 +127,7 @@ void Ammo::ReScaleme()  {
   }
 
 void Ammo::ReAlignme(int x, int y)  {
+  x=y; //UNUSED!!!
   }
 
 void Ammo::InitGraphics()  {

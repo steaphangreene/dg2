@@ -10,15 +10,16 @@
 #define TERRAIN_FOREST		5
 #define TERRAIN_ROCK		6
 #define TERRAIN_SAND		7
-#define TERRAIN_MAXREAL		8
+#define TERRAIN_ASHES		8
+#define TERRAIN_MAXREAL		9
 
-#define TERRAIN_LOWWATER	8
-#define TERRAIN_WATER		9
-#define TERRAIN_OCEAN		10
-#define TERRAIN_MAX		11
+#define TERRAIN_LOWWATER	9
+#define TERRAIN_WATER		10
+#define TERRAIN_OCEAN		11
+#define TERRAIN_MAX		12
 
-#define TERRAIN_CINDERS		11
-#define TERRAIN_ASHES		12
+#define TERRAIN_CINDERS		12
+
 
 #define TERRAIN_BATTLEMENT	
 #define TERRAIN_DRY		
@@ -87,6 +88,7 @@ class Cell : public Thing {
 	};
   int InView()  { return viewers; };
   int Terrain();
+  void SetTerrain(int t) { terrain = t; Changed[thingnum] = 1; };
   int IsPath();
 
   int Claim(Thing *, int, int);
@@ -106,7 +108,7 @@ class Cell : public Thing {
   virtual void ReScaleme();
   virtual void ReAlignme(int, int);
   static int GraphicsInitialized;
-  static Graphic *pics[TERRAIN_MAX][3][2];
+  static Graphic *pics[TERRAIN_MAX][3][2][3];
   int terrain;
   void  LinkMe(int, Cell *);
   char visible, discovered, mapped;
@@ -116,6 +118,7 @@ class Cell : public Thing {
   Thing *dibs[2];
   friend class Map;
   friend class Spell;
+  friend class Thing;
   };
 
 #endif

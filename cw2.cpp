@@ -44,15 +44,15 @@ int main(int argc, char **argv)  {
   ARGV = argv;
   ARGC = argc;
 //  SoundCard SB(22050);
-  Death = new DigSample("sounds/die.wav");
-  Punch = new DigSample("sounds/punch.wav");
-  Klang1 = new DigSample("sounds/klang1.wav");
-  Klang2 = new DigSample("sounds/klang2.wav");
-  Klang3 = new DigSample("sounds/klang3.wav");
-  BowFire = new DigSample("sounds/bowfire.wav");
-  BowHit = new DigSample("sounds/bowhit.wav");
-  AxeThrow = new DigSample("sounds/axethrow.wav");
-  ButtonClick = new DigSample("sounds/bowHit.wav");
+//  Death = new DigSample("sounds/die.wav");
+//  Punch = new DigSample("sounds/punch.wav");
+//  Klang1 = new DigSample("sounds/klang1.wav");
+//  Klang2 = new DigSample("sounds/klang2.wav");
+//  Klang3 = new DigSample("sounds/klang3.wav");
+//  BowFire = new DigSample("sounds/bowfire.wav");
+//  BowHit = new DigSample("sounds/bowhit.wav");
+//  AxeThrow = new DigSample("sounds/axethrow.wav");
+//  ButtonClick = new DigSample("sounds/bowHit.wav");
 
   Graphic NormalMouseG("graphics/pointers/normal.bmp");
 
@@ -181,6 +181,7 @@ int main(int argc, char **argv)  {
   gmode[4].mxe = 512;
   gmode[4].mye = 400;
 
+  screen = new Screen;
   if(argc > 1)  {
     if(argv[1][0] == '3')  cmode = 0;
     else if(argv[1][0] == '6')  cmode = 1;
@@ -188,7 +189,13 @@ int main(int argc, char **argv)  {
     else if(argv[1][1] == '0')  cmode = 3;
     else if(argv[1][1] == '2')  cmode = 4;
     }
-  screen = new Screen;
+  else  {
+    if(screen->DefaultXSize() == 320)  cmode = 0;
+    else if(screen->DefaultXSize() == 640)  cmode = 1;
+    else if(screen->DefaultXSize() == 800)  cmode = 2;
+    else if(screen->DefaultXSize() == 1024)  cmode = 3;
+    else if(screen->DefaultXSize() == 1280)  cmode = 4;
+    }
 //  while(!screen->ModeSupported(gmode[cmode].cmode))  cmode--;
 //  screen ->SetMode(gmode[cmode].cmode);
   screen->SetSize(gmode[cmode].x, gmode[cmode].y);
@@ -294,7 +301,7 @@ int main(int argc, char **argv)  {
   debug_position=90;
   delete screen;
   delete user;
-
+  return 0;
   }
 
 int GetNetPlayers()  {

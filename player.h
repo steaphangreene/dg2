@@ -18,6 +18,8 @@ typedef int Command;
 #define COMMAND_PATROL		9
 #define COMMAND_FLEE		10
 #define COMMAND_BUILD		11
+#define COMMAND_EXTINGUISH	12
+#define COMMAND_DIG		13
 
 #define PLAYER_CONSOLE	0
 #define PLAYER_NETWORK	1

@@ -28,8 +28,8 @@ extern GMode gmode[10];
 extern char cmode;
 
 int MainButtonNum;
-Window mainw = 0;
-Window miniw = 0;
+Panel mainp = 0;
+Panel minip = 0;
 Thing things;
 extern Mouse *mouse;
 
@@ -139,26 +139,42 @@ void Game::Play(int pnum)  {
 		break;
     }
   debug_position = 1120;
-  mainw = screen->NewWindow(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
+  mainp = screen->NewPanel(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
   mouse->SetCursor(&Normalg);
   mouse->ShowCursor();
   mouse->SetBehavior(MOUSE_CLICK, MOUSE_IGNORE, MOUSE_CLICK);
-  mouse->SetWindowBehavior(mainw, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetPanelBehavior(mainp, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
 
   debug_position = 1130;
-  miniw = screen->NewWindow(gm.mxorig, gm.myorig, gm.mxedge, gm.myedge);
+  minip = screen->NewPanel(gm.mxorig, gm.myorig, gm.mxedge, gm.myedge);
   for(ctr=gm.mxorig; ctr<gm.mxedge; ctr++)  {
     for(ctr2=gm.myorig; ctr2<gm.myedge; ctr2++)  {
       screen->BSetPoint(ctr, ctr2, 0);
       }
     }
-  mouse->SetWindowBehavior(miniw, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetPanelBehavior(minip, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
 
   debug_position = 1140;
   Creature *dude = NULL;
   debug_position = 1141;
   dude->SetCreatureGraphic(CREATURE_DUDE, "dude");
   debug_position = 1142;
+  Weapon bow, spear, sword;
+  bow.ammo = AMMO_ARROW;
+  bow.range = 6;
+  bow.pdam = 50;
+  bow.bdam = 0;
+  bow.rof = 80;
+  spear.range = 2;
+  spear.mrange = 2;
+  spear.pdam = 20;
+  spear.bdam = 20;
+  spear.SetImage("graphics/weapons/spear");
+  sword.range = 1;
+  sword.pdam = 10;
+  sword.bdam = 30;
+  sword.SetImage("graphics/weapons/sword");
+
   for(ctr2=0; ctr2<num_players; ctr2++)  {
     for(ctr=0; ctr<NUM_GUYS; ctr++)  {
       debug_position = 1143;
@@ -177,6 +193,9 @@ void Game::Play(int pnum)  {
 	  }
 	}
       else if(ctr2 == 0 && ctr == 1) dude->LearnSpell(SPELL_VISION);
+      if(ctr2 == 0 && ctr < 30) dude->AddWeapon(bow);
+      else if(ctr2 == 0 && ctr < 60) dude->AddWeapon(spear);
+      else if(ctr2 == 0) dude->AddWeapon(sword);
       debug_position = 1150;
       }
     }
@@ -248,10 +267,10 @@ void Game::Play(int pnum)  {
     }
   delete backplate;
   screen->FadeOut(4);
-  screen->DeleteWindow(miniw);
-  screen->DeleteWindow(mainw);
-  screen->EraseWindowSprites(0);
-  screen->EraseWindowBackground(0);
+  screen->DeletePanel(minip);
+  screen->DeletePanel(mainp);
+  screen->ErasePanelSprites(0);
+  screen->ErasePanelBackground(0);
   screen->ClearScreen();
   debug_position = 1250;
   }
@@ -272,11 +291,11 @@ int Game::MainMenu()  {
   IntList overwritten;
   unsigned char *buf;
   char inmainmenu = 1, othermenu = 0;
-  Window menuwin = screen->NewWindow(gm.mxb, gm.myb, gm.mxe, gm.mye);
-  mouse->SetWindowBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  overwritten = screen->EraseWindowSprites(menuwin); 
-  screen->EraseWindowBackground(menuwin); 
-  buf = screen->BackupWindow(menuwin);
+  Panel menuwin = screen->NewPanel(gm.mxb, gm.myb, gm.mxe, gm.mye);
+  mouse->SetPanelBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  overwritten = screen->ErasePanelSprites(menuwin); 
+  screen->ErasePanelBackground(menuwin); 
+  buf = screen->BackupPanel(menuwin);
 
   UserAction curact;
 
@@ -369,10 +388,10 @@ int Game::MainMenu()  {
       }
     screen->Refresh();
     }
-  screen->EraseWindowSprites(menuwin); 
-  screen->EraseWindowBackground(menuwin); 
-  screen->RestoreWindow(menuwin, buf);
-  screen->DeleteWindow(menuwin);
+  screen->ErasePanelSprites(menuwin); 
+  screen->ErasePanelBackground(menuwin); 
+  screen->RestorePanel(menuwin, buf);
+  screen->DeletePanel(menuwin);
   screen->RedrawSprites(overwritten);
   return othermenu;
   }
@@ -381,11 +400,11 @@ int Game::EnvironMenu()  {
   IntList overwritten;
   unsigned char *buf;
   char inmainmenu = 1, othermenu = 0;
-  Window menuwin = screen->NewWindow(gm.mxb, gm.myb, gm.mxe, gm.mye);
-  mouse->SetWindowBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  overwritten = screen->EraseWindowSprites(menuwin); 
-  screen->EraseWindowBackground(menuwin); 
-  buf = screen->BackupWindow(menuwin);
+  Panel menuwin = screen->NewPanel(gm.mxb, gm.myb, gm.mxe, gm.mye);
+  mouse->SetPanelBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  overwritten = screen->ErasePanelSprites(menuwin); 
+  screen->ErasePanelBackground(menuwin); 
+  buf = screen->BackupPanel(menuwin);
 
   UserAction curact;
 
@@ -474,10 +493,10 @@ int Game::EnvironMenu()  {
       }
     screen->Refresh();
     }
-  screen->EraseWindowSprites(menuwin); 
-  screen->EraseWindowBackground(menuwin); 
-  screen->RestoreWindow(menuwin, buf);
-  screen->DeleteWindow(menuwin);
+  screen->ErasePanelSprites(menuwin); 
+  screen->ErasePanelBackground(menuwin); 
+  screen->RestorePanel(menuwin, buf);
+  screen->DeletePanel(menuwin);
   screen->RedrawSprites(overwritten);
   return othermenu;
   }

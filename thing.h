@@ -29,8 +29,8 @@ class Thing  {
   virtual void Select(); 
   virtual void Deselect();
   virtual void ToggleSelect();
-  int Number()  { return thingnum; }
-  char Type()  { return type; }
+  int Number()  { return thingnum; };
+  char Type()  { return type; };
   static void DeleteAll();
   Cell *Location(int v1)  { return(location[v1]); };
 
@@ -52,6 +52,15 @@ class Thing  {
 	};
   void Fall();
   Thing *GetThingByNumber(int n) { return list[n]; };
+  void Heat(int temp, int max);
+  int FireFeul() { return ffeul; };
+  int FireTemp() { return ftemp; };
+  int FireResist() { return fresist; };
+  int BurnFeul(int b) {
+    ffeul -= b;
+    if(ffeul<0) ffeul=0;
+    return ffeul;
+    };
 
   protected:
   int Interp(char *);
@@ -75,6 +84,7 @@ class Thing  {
   char type, exists, selected, flying;
   int thingnum;
   int height, altitude;
+  int fresist, ffeul, ftemp;
   IntList spell;
   Cell *location[2];
   Thing **inside;

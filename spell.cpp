@@ -15,7 +15,7 @@ extern GMode gmode[10];
 extern char cmode;
 extern Screen *screen;
 extern Map *curmap;
-extern Window mainw;
+extern Panel mainp;
 extern Player *p1;
 
 char spact[64][4] = {
@@ -117,7 +117,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       images = new (Sprite *)[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
-      images[0]->SetWindow(mainw);
+      images[0]->SetPanel(mainp);
       location[0] = (Cell*)list[params[0]];
       location[0]->spell += thingnum;
       Changed[thingnum] = 1;
@@ -135,7 +135,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       images = new (Sprite *)[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
-      images[0]->SetWindow(mainw);
+      images[0]->SetPanel(mainp);
       location[0] = (Cell*)list[params[0]];
       location[0]->spell += thingnum;
       Changed[thingnum] = 1;
@@ -144,7 +144,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       images = new (Sprite *)[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
-      images[0]->SetWindow(mainw);
+      images[0]->SetPanel(mainp);
       location[0] = list[params[0]]->Location(0)->Location(0);
       location[0]->spell += thingnum;
       Changed[thingnum] = 0;
@@ -157,7 +157,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       images = new (Sprite *)[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
-      images[0]->SetWindow(mainw);
+      images[0]->SetPanel(mainp);
       location[0] = list[params[0]]->Location(0)->Location(0);
       location[0]->spell += thingnum;
       {
@@ -191,6 +191,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       tmpt = new Ammo(AMMO_RAY, caster->location[0]->location[0],
 	(Cell*)list[params[0]]->Location(0)->Location(0), 64);
       dodad = tmpt->thingnum;
+      Waiting[thingnum] = 1;
       } break;
     case(SPELL_REOPEN_PORTAL):  {
       Cell *tmpc = ((Cell*)list[params[0]]);
@@ -227,9 +228,9 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       images[0]->DisableCollisions();
       images[1]->DisableCollisions();
       images[2]->DisableCollisions();
-      images[0]->SetWindow(mainw);
-      images[1]->SetWindow(mainw);
-      images[2]->SetWindow(mainw);
+      images[0]->SetPanel(mainp);
+      images[1]->SetPanel(mainp);
+      images[2]->SetPanel(mainp);
       Changed[thingnum] = 1;
       } break;
     default:  {
@@ -360,16 +361,20 @@ void Spell::updateme()  {
 	images[0]->Move(x, y);
 
 	Cell *tmpc;
+	location[0]->Heat(200, 200);
 	((Cell *)location[0])->StrikeAllIn(this, 200, 500, 500);
 	for(ctr=0; ctr<12; ctr+=2)  {
 	  tmpc = location[0]->Next(ctr);
 	  if(tmpc != NULL)  {
+	    tmpc->Heat(200, 200);
 	    tmpc->StrikeAllIn(this, 200, 250, 450);
 	    tmpc = tmpc->Next(ctr);
 	    if(tmpc != NULL)  {
+	      tmpc->Heat(200, 200);
 	      tmpc->StrikeAllIn(this, 200, 150, 400);
 	      tmpc = tmpc->Next(ctr+4);
 	      if(tmpc != NULL)  {
+	        tmpc->Heat(200, 200);
 		tmpc->StrikeAllIn(this, 200, 150, 400);
 		}
 	      }
@@ -437,10 +442,6 @@ void Spell::tickme()  {
     case(SPELL_DISINTIGRATE):  {
       if(list[dodad] == NULL)  {
 	delete list[params[0]];
-//	if(list[params[0]]->Type() == THING_CREATURE)
-//	  delete ((Creature*)list[params[0]]);
-//	else if(list[params[0]]->Type() == THING_STRUCT)
-//	  delete ((Structure*)list[params[0]]);
 	delete this;
 	return;
 	}
@@ -506,7 +507,7 @@ void Spell::tickme()  {
 	movee->location[0] = dest;
 	movee->location[1] = NULL;
 	movee->Deselect();
-	movee->goal.Done();
+	movee->GoalDone();
 	movee->dirf = -1;
 	movee->dirt = -1;
 	movee->distt = -1;
@@ -587,5 +588,6 @@ void Spell::ReScaleme()  {
   }
 
 void Spell::ReAlignme(int x, int y)  {
+  x=y; //UNUSED!!!
   Changed[thingnum] = 1;
   }

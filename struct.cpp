@@ -5,18 +5,23 @@
 
 #define gm gmode[cmode]
 
-extern Window mainw;
+extern Panel mainp;
 extern GMode gmode[10];
 extern char cmode;
 
-Graphic *Structure::stgr[STRUCT_MAX][MATERIAL_MAXBUILD][3][3];
+int SMF[STRUCT_MAXMAT][MATERIAL_MAXBUILD];
+
+Graphic *Structure::stgr[STRUCT_MAX][MATERIAL_MAXBUILD][3][3][NEIGHBOR_MAX];
 
 int Structure::graphicsinitialized = 0;
 
 Structure::Structure(int Type, int Material)  {
   if(!graphicsinitialized)  InitGraphics();
-  struct_type = Type;
   material = Material;
+  struct_type = Type;
+  if(material == MATERIAL_WOOD)  fresist = 40;
+  else  fresist = 32767;
+  if(struct_type < STRUCT_MAXMAT)  ffeul = SMF[struct_type][material];
   if(Type == STRUCT_BRIDGE || Type == STRUCT_RAMP) height = 1;
   else height = 10;
   location[0] = NULL;
@@ -26,7 +31,7 @@ Structure::Structure(int Type, int Material)  {
   inside[1] = NULL;
   type = THING_STRUCT;
   ClaimSprite(image.SpriteNumber());
-  image.SetWindow(mainw);
+  image.SetPanel(mainp);
   discovered = 0;
   }
 
@@ -40,7 +45,7 @@ Structure::~Structure()  {
 
 int Structure::Place(Cell *targ)  {
   int alt=-100000, malt = 0;
-  if(stgr[struct_type][material][2][0] == NULL)  return 0;
+  if(stgr[struct_type][material][2][0][0] == NULL)  return 0;
   switch(struct_type)  {
     case(STRUCT_RAMP):
     case(STRUCT_WALL):  {
@@ -94,10 +99,45 @@ int Structure::Place(Cell *targ)  {
     altitude = alt;
 //    printf("Placing Struct at altitude %d\r\n", altitude);
     }
+  InitNeighbors();
   return 1;
   }
 
-int Structure::Damage(int, int);
+void Structure::FigureNeighbors()  {
+  int ctr, tmpn = neighbors;
+  neighbors = 0;
+  for(ctr=0; ctr<12; ctr+=2)  {
+    Cell *tmpc = Location(0)->Location(0);
+    tmpc = tmpc->Next(ctr);
+    if(tmpc != NULL)  {
+      Thing *tmpt = tmpc->Inside(0);
+      if(tmpt != NULL && tmpt->Type() == THING_STRUCT
+	  && ((Structure*)tmpt)->StructType() == STRUCT_WALL)  {
+	neighbors += 1<<(ctr>>1);
+	}
+      }
+    }
+  if(neighbors != tmpn)  Changed[thingnum] = 1;
+  }
+
+void Structure::InitNeighbors()  {
+  int ctr;
+  neighbors = 0;
+  for(ctr=0; ctr<12; ctr+=2)  {
+    Cell *tmpc = Location(0)->Location(0);
+    tmpc = tmpc->Next(ctr);
+    if(tmpc != NULL)  {
+      Thing *tmpt = tmpc->Inside(0);
+      if(tmpt != NULL && tmpt->Type() == THING_STRUCT
+	  && ((Structure*)tmpt)->StructType() == STRUCT_WALL)  {
+	neighbors += 1<<(ctr>>1);
+	((Structure*)tmpt)->FigureNeighbors();
+	}
+      }
+    }
+  }
+
+void Structure::Damage(int, int)  {};
 
 void Structure::Select()  {}
 
@@ -109,7 +149,10 @@ void Structure::ReScaleme()  {}
 
 void Structure::ReAlignme(int, int)  {}
 
-void Structure::tickme()  { Waiting[thingnum]=0; }
+void Structure::tickme()  { 
+  Waiting[thingnum]=0;
+//  Thing::tickme();
+  }
 
 void Structure::updateme()  { 
   Changed[thingnum]=0;
@@ -117,7 +160,10 @@ void Structure::updateme()  {
     int x, y;
     x = Location(0)->XPos(); 
     y = Location(0)->YPos();
-    image.UseImage(stgr[struct_type][material][gm.xstep/32][0]);
+    if(stgr[struct_type][material][gm.xstep/32][0][neighbors] != NULL)
+      image.UseImage(stgr[struct_type][material][gm.xstep/32][0][neighbors]);
+    else 
+      image.UseImage(stgr[struct_type][material][gm.xstep/32][0][0]);
     image.SetPriority(100000-(Height()));
     image.Move(x, y);
     discovered = 1;
@@ -126,8 +172,14 @@ void Structure::updateme()  {
     int x, y;
     x = Location(0)->XPos(); 
     y = Location(0)->YPos();
-    image.UseImage(stgr[struct_type][material][gm.xstep/32][1+(gm.xstep==32
-	|| (gm.xstep==16 && (location[0]->XCoord() & 1) == 0))]);
+    if(stgr[struct_type][material][gm.xstep/32][1+(gm.xstep==32
+	|| (gm.xstep==16 && (location[0]->XCoord() & 1) == 0))][neighbors]
+	!= NULL)
+      image.UseImage(stgr[struct_type][material][gm.xstep/32][1+(gm.xstep==32
+	|| (gm.xstep==16 && (location[0]->XCoord() & 1) == 0))][neighbors]);
+    else
+      image.UseImage(stgr[struct_type][material][gm.xstep/32][1+(gm.xstep==32
+	|| (gm.xstep==16 && (location[0]->XCoord() & 1) == 0))][0]);
     image.SetPriority(100000-(Height()));
     image.Move(x, y);
     discovered = 1;
@@ -138,36 +190,62 @@ void Structure::updateme()  {
 void Structure::InitGraphics()  {
   if(graphicsinitialized)  return;
   int ctr, ctr2, ctr3;
+  char buf[32];
   graphicsinitialized = 1;
 
   for(ctr=0; ctr<STRUCT_MAX; ctr++)  {
     for(ctr2=0; ctr2<MATERIAL_MAXBUILD; ctr2++)  {
-      stgr[ctr][ctr2][2][0] = NULL;
+      if(ctr<STRUCT_MAXMAT)  {
+	if(ctr2 == MATERIAL_WOOD) SMF[ctr][ctr2] = 100;
+	else SMF[ctr][ctr2] = 0;
+	if(ctr == STRUCT_WALL) SMF[ctr][ctr2] *= 10;
+	else if(ctr == STRUCT_RAMP) SMF[ctr][ctr2] *= 5;
+	else if(ctr == STRUCT_BRIDGE) SMF[ctr][ctr2] *= 1;
+	}
+      for(ctr3=0; ctr3<NEIGHBOR_MAX; ctr3++)  {
+	stgr[ctr][ctr2][2][0][ctr3] = NULL;
+	}
       }
     }
-  stgr[STRUCT_WALL][MATERIAL_ROCK][2][0] =
-	new Graphic("graphics/structs/wall.bmp");
-  stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0] =
+  stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0] =
+	new Graphic("graphics/structs/r_wall/00.bmp");
+
+  for(ctr=0; ctr<NEIGHBOR_MAX; ctr++)  {
+    FILE *tmpfl;
+    sprintf(buf, "graphics/structs/w_wall/%.2d.bmp%c", ctr, 0);
+    tmpfl = fopen(buf, "r");
+    if(tmpfl != NULL)  {
+      fclose(tmpfl);
+      stgr[STRUCT_WALL][MATERIAL_WOOD][2][0][ctr] = new Graphic(buf);
+      }
+    else  stgr[STRUCT_WALL][MATERIAL_WOOD][2][0][ctr] = NULL;
+    }
+
+  stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0] =
 	new Graphic("graphics/structs/ramp.bmp");
-  stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0] =
+  stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0] =
 	new Graphic("graphics/structs/bridge.bmp");
+ int ctrn;
+ for(ctrn=0; ctrn < NEIGHBOR_MAX; ctrn++) {
   for(ctr=0; ctr<STRUCT_MAX; ctr++)  {
     for(ctr2=0; ctr2<MATERIAL_MAXBUILD; ctr2++)  {
-      if(stgr[ctr][ctr2][2][0] != NULL)  {
-	stgr[ctr][ctr2][1][0] =
-	  new Graphic(stgr[ctr][ctr2][2][0]->Scaled(0.5));
-	stgr[ctr][ctr2][0][0] =
-	  new Graphic(stgr[ctr][ctr2][2][0]->Scaled(0.25));
+      if(stgr[ctr][ctr2][2][0][ctrn] != NULL)  {
+	stgr[ctr][ctr2][1][0][ctrn] =
+	  new Graphic(stgr[ctr][ctr2][2][0][ctrn]->Scaled(0.5));
+	stgr[ctr][ctr2][0][0][ctrn] =
+	  new Graphic(stgr[ctr][ctr2][2][0][ctrn]->Scaled(0.25));
 	for(ctr3=0; ctr3<3; ctr3++)  {
-	  stgr[ctr][ctr2][ctr3][1] =
-		new Graphic(stgr[ctr][ctr2][ctr3][0]->Hashed());
-	  stgr[ctr][ctr2][ctr3][2] =
-		new Graphic(stgr[ctr][ctr2][ctr3][0]->OffHashed());
-	  stgr[ctr][ctr2][ctr3][0]->FindTrueCenter();
-	  stgr[ctr][ctr2][ctr3][1]->FindTrueCenter();
-	  stgr[ctr][ctr2][ctr3][2]->FindTrueCenter();
+	  stgr[ctr][ctr2][ctr3][1][ctrn] =
+		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->Hashed());
+	  stgr[ctr][ctr2][ctr3][2][ctrn] =
+		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->OffHashed());
+	  stgr[ctr][ctr2][ctr3][0][ctrn]->FindTrueCenter();
+	  stgr[ctr][ctr2][ctr3][1][ctrn]->FindTrueCenter();
+	  stgr[ctr][ctr2][ctr3][2][ctrn]->FindTrueCenter();
 	  }
 	}
       }
     }
   }
+ }
+

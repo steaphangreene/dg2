@@ -62,7 +62,8 @@ void Map::Draw(int X1, int Y1, int X2, int Y2)  {
 	curc = cells[Xc][Yc];
 	VidMem = screen->DoubleBuffer(X, Y);
 	memcpy(VidMem, &(Cell::pics[(curc->discovered*255) & vt][mode]
-		[curc->visible]->image[tileyp][tilexp]),  trans);
+		[curc->visible][(curc->ftemp > curc->fresist)+(curc->ftemp > 0)]
+			->image[tileyp][tilexp]),  trans);
 	tileyp++;
 	tileyp %= (TILE_YSIZE >> (2-mode));
 	}

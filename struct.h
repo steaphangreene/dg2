@@ -32,20 +32,24 @@
 #define MATERIAL_OIL		10
 #define MATERIAL_MAX		11
 
+#define NEIGHBOR_MAX		64
+
 class Structure : public Thing {
   public:
   Structure(int Type, int Material);
   virtual ~Structure();
   int Place(Cell *);
-  int Damage(int, int);
+  void Damage(int, int);
   virtual void Select(); 
   virtual void Deselect();
   virtual void ToggleSelect();
   static void InitGraphics();
+  void FigureNeighbors();
+  void InitNeighbors();
   int StructType()  { return struct_type; };
 
   private:
-  static Graphic *stgr[STRUCT_MAX][MATERIAL_MAXBUILD][3][3];
+  static Graphic *stgr[STRUCT_MAX][MATERIAL_MAXBUILD][3][3][NEIGHBOR_MAX];
   static int graphicsinitialized;
   virtual void ReScaleme(); 
   virtual void ReAlignme(int, int); 
@@ -55,5 +59,6 @@ class Structure : public Thing {
   char material;
   char hit;
   char discovered;
+  char neighbors;
   Sprite image;
   };
