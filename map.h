@@ -20,6 +20,7 @@ class Map {
   void Mini2Cell(int &, int &);
   void Draw();
   void Draw(int, int, int, int);
+  void DrawCell(int, int);
 
   private:
   Cell ***cells;

@@ -7,11 +7,12 @@
 #define MAX_WEAP	10
 const char *weapn[MAX_WEAP] = { "punch", "dagger", "sword", "btlaxe",
 	"spear", "pike", "cross", "heavcr", "bow", "knife" };
-int weapk[MAX_WEAP] = { SCAN_1, SCAN_2, SCAN_3, SCAN_4, SCAN_5, SCAN_6,
-	SCAN_7, SCAN_8, SCAN_9, SCAN_0 };
+int weapk[MAX_WEAP] = { KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6,
+	KEY_7, KEY_8, KEY_9, KEY_0 };
 
 Screen *screen;
-User *user;
+InputQueue *input;
+Keyboard *key;
 Sprite *s, *g, *space;
 Graphic *gg[FRAME_MAX], *spg;
 Graphic *sw[MAX_WEAP][64];
@@ -26,10 +27,8 @@ int fromres;
 int frame;
 short mem[10][4];
 
-Button *StanceB;
-Button *FrameB;
-
-Button *LeftB, *RightB, *UpB, *DownB, *PrevB, *NextB, *TopB, *ClockB, *CClockB;
+Stickey *StanceB, *FrameB;
+Clickey *LeftB, *RightB, *UpB, *DownB, *PrevB, *NextB, *TopB, *ClockB, *CClockB;
 
 void Stance();
 void UnStance();
@@ -47,10 +46,11 @@ void PlayDownM(int fbase);
 void PlayLoopM(int fbase);
 void DrawWeapon();
 void OnFrame();
-void WeaponManipEvent(UserAction act);
+void WeaponManipEvent(InputAction *act);
 void ManipWeapon();
 
-int Main(int argc, char **argv)  {
+int main(int argc, char **argv)  {
+  InitUserEngine(argc, argv);
   char buf[64]; int ctr, ctrw;
   Graphic *atc, *tc;
 
@@ -98,9 +98,12 @@ int Main(int argc, char **argv)  {
   else  {
     Exit(1, "Unable to access \"%s\"!\n", argv[1]);
     }
-  screen = new Screen(640, 480);
+  screen = new Screen;
+  screen->SetApparentDepth(8);
+  screen->SetSize(640, 480);
   screen->SetFrameRate(10);
-  user = new User;
+  input = new InputQueue;
+  key = new Keyboard;
 
   if(Directory == NULL)  {
     Directory = new char[strlen(ResourceFile)+1];
@@ -108,7 +111,7 @@ int Main(int argc, char **argv)  {
     Directory[strlen(ResourceFile)-4] = 0;
     }
 
-  screen->GetPalette("system/base.pal");
+  screen->SetPalette("system/base.pal");
   Graphic backg("system/backg.bmp", screen->GetPalette());
   screen->FullScreenGraphic(backg);
   spg = new Graphic("system/space.bmp", screen->GetPalette());
@@ -119,10 +122,15 @@ int Main(int argc, char **argv)  {
   tc = new Graphic(buf, screen->GetPalette());
   screen->SetFont("system/basic10.sgf");
 
-  debug_position = 12;
+  Debug("main()  Before Mouse");
   Mouse mouse;
+  Graphic cursor("system/cursor.bmp", screen->GetPalette());
+  cursor.tcolor = cursor.image[4].uc[0];
+  mouse.SetCursor(cursor);
   mouse.ShowCursor();
-  mouse.SetBehavior(MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  mouse.SetBehavior(0, 1, MB_CLICK);
+  mouse.SetBehavior(0, 2, MB_CLICK);
+  mouse.SetBehavior(0, 3, MB_CLICK);
   for(ctrw=0; ctrw<MAX_WEAP; ctrw++)  {
     for(ctr=0; ctr<64; ctr++)  {
       sw[ctrw][ctr] = NULL;
@@ -215,12 +223,12 @@ int Main(int argc, char **argv)  {
   g = new Sprite;
   s = new Sprite;
   unsigned char remap[256];
-  g->SetColormap((char *)remap);
+  g->SetColormap(remap);
   for(ctr=0; ctr<256; ctr++)  remap[ctr] = ctr;
-  remap[tc->image[0][0]] = atc->image[1][0];
-  remap[tc->image[0][1]] = atc->image[1][1];
-  remap[tc->image[1][0]] = atc->image[2][0];
-  remap[tc->image[1][1]] = atc->image[2][1];
+  remap[tc->image[0].uc[0]] = atc->image[1].uc[0];
+  remap[tc->image[0].uc[1]] = atc->image[1].uc[1];
+  remap[tc->image[1].uc[0]] = atc->image[2].uc[0];
+  remap[tc->image[1].uc[1]] = atc->image[2].uc[1];
 
   frame=FRAME_STAND;
   g->UseImage(gg[frame]);
@@ -228,182 +236,184 @@ int Main(int argc, char **argv)  {
   g->Move(100, 100);
   DrawWeapon();
 
-  cval cd, cl, cb, ct;
-  cd = screen->GetPalette().GetClosestColor(51, 0, 0);
-  cb = screen->GetPalette().GetClosestColor(153, 102, 51);
-  cl = screen->GetPalette().GetClosestColor(204, 153, 102);
-  ct = screen->GetPalette().GetClosestColor(102, 51, 0);
-  
-  Button QuitB(128, 16, "Quit (ESC)", ct, cl, cb, cd);
-   QuitB.Move(0, 16);
-   user->MapKeyToButton(SCAN_ESC, QuitB);
-  Button ResetB(128, 16, "Reset Pos (BackSpace)", ct, cl, cb, cd);
-   ResetB.Move(128, 16);
-   user->MapKeyToButton(SCAN_BACKSP, ResetB);
-  Button SaveB(128, 16, "Build CRF (F12)", ct, cl, cb, cd);
-   SaveB.Move(256, 16);
-   user->MapKeyToButton(SCAN_F12, SaveB);
-  Button RebuildB(128, 16, "Save VAL files (F11)", ct, cl, cb, cd);
-  RebuildB.Move(384, 16);
-  user->MapKeyToButton(SCAN_F11, RebuildB);
+  color cd, cl, cb, ct;
+  Palette p = screen->GetPalette();
+  cd = p.GetClosestColor(51, 0, 0);
+  cb = p.GetClosestColor(153, 102, 51);
+  cl = p.GetClosestColor(204, 153, 102);
+  ct = p.GetClosestColor(102, 51, 0);
 
-  Button *WeapB[MAX_WEAP];
+  Clickey QuitB(128, 16, "Quit (ESC)", ct, cl, cb, cd);
+   QuitB.Move(0, 16);
+   input->MapKeyToControl(KEY_ESC, QuitB);
+
+  Clickey ResetB(128, 16, "Reset Pos (BackSpace)", ct, cl, cb, cd);
+   ResetB.Move(128, 16);
+   input->MapKeyToControl(KEY_BACKSP, ResetB);
+  Clickey SaveB(128, 16, "Build CRF (F12)", ct, cl, cb, cd);
+   SaveB.Move(256, 16);
+   input->MapKeyToControl(KEY_F12, SaveB);
+  Clickey RebuildB(128, 16, "Save VAL files (F11)", ct, cl, cb, cd);
+  RebuildB.Move(384, 16);
+  input->MapKeyToControl(KEY_F11, RebuildB);
+
+  Clickey *WeapB[MAX_WEAP];
   for(ctrw=0; ctrw<MAX_WEAP; ctrw++)  {
-    WeapB[ctrw] = new Button(64, 16, weapn[ctrw], ct, cl, cb, cd);
+    WeapB[ctrw] = new Clickey(64, 16, weapn[ctrw], ct, cl, cb, cd);
     WeapB[ctrw]->Move(ctrw*64, 336);
-    user->MapKeyToButton(weapk[ctrw], *WeapB[ctrw]);
+    input->MapKeyToControl(weapk[ctrw], *WeapB[ctrw]);
     }
 
-  Button WalkB(64, 16, "Walk", ct, cl, cb, cd);
+  Clickey WalkB(64, 16, "Walk", ct, cl, cb, cd);
    WalkB.Move(0, 384);
-   user->MapKeyToButton(SCAN_W, WalkB);
-  Button WorkB(64, 16, "worK", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_W, WalkB);
+  Clickey WorkB(64, 16, "worK", ct, cl, cb, cd);
    WorkB.Move(64, 384);
-   user->MapKeyToButton(SCAN_K, WorkB);
-  Button BuildB(64, 16, "Build", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_K, WorkB);
+  Clickey BuildB(64, 16, "Build", ct, cl, cb, cd);
    BuildB.Move(128, 384);
-   user->MapKeyToButton(SCAN_B, BuildB);
-  Button FarmB(64, 16, "Farm", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_B, BuildB);
+  Clickey FarmB(64, 16, "Farm", ct, cl, cb, cd);
    FarmB.Move(192, 384);
-   user->MapKeyToButton(SCAN_F, FarmB);
-  Button DigB(64, 16, "Dig", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_F, FarmB);
+  Clickey DigB(64, 16, "Dig", ct, cl, cb, cd);
    DigB.Move(256, 384);
-   user->MapKeyToButton(SCAN_D, DigB);
-  Button ChopB(64, 16, "cHop", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_D, DigB);
+  Clickey ChopB(64, 16, "cHop", ct, cl, cb, cd);
    ChopB.Move(320, 384);
-   user->MapKeyToButton(SCAN_H, ChopB);
+   input->MapKeyToControl(KEY_H, ChopB);
 
-  Button IgnB(64, 16, "Ignite", ct, cl, cb, cd);
+  Clickey IgnB(64, 16, "Ignite", ct, cl, cb, cd);
    IgnB.Move(0, 400);
-   user->MapKeyToButton(SCAN_I, IgnB);
-  Button ExtB(64, 16, "eXtinguish", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_I, IgnB);
+  Clickey ExtB(64, 16, "eXtinguish", ct, cl, cb, cd);
    ExtB.Move(64, 400);
-   user->MapKeyToButton(SCAN_X, ExtB);
-  Button MineB(64, 16, "Mine", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_X, ExtB);
+  Clickey MineB(64, 16, "Mine", ct, cl, cb, cd);
    MineB.Move(128, 400);
-   user->MapKeyToButton(SCAN_M, MineB);
-  Button OperB(64, 16, "Operate", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_M, MineB);
+  Clickey OperB(64, 16, "Operate", ct, cl, cb, cd);
    OperB.Move(192, 400);
-   user->MapKeyToButton(SCAN_O, OperB);
-  Button GrabB(64, 16, "Grab", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_O, OperB);
+  Clickey GrabB(64, 16, "Grab", ct, cl, cb, cd);
    GrabB.Move(256, 400);
-   user->MapKeyToButton(SCAN_G, GrabB);
+   input->MapKeyToControl(KEY_G, GrabB);
 
-  Button CastB(64, 16, "Cast", ct, cl, cb, cd);
+  Clickey CastB(64, 16, "Cast", ct, cl, cb, cd);
    CastB.Move(0, 416);
-   user->MapKeyToButton(SCAN_C, CastB);
-  Button PrayB(64, 16, "Pray", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_C, CastB);
+  Clickey PrayB(64, 16, "Pray", ct, cl, cb, cd);
    PrayB.Move(64, 416);
-   user->MapKeyToButton(SCAN_P, PrayB);
-  Button VestB(64, 16, "Vest", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_P, PrayB);
+  Clickey VestB(64, 16, "Vest", ct, cl, cb, cd);
    VestB.Move(128, 416);
-   user->MapKeyToButton(SCAN_V, VestB);
-  Button TeachB(64, 16, "Teach", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_V, VestB);
+  Clickey TeachB(64, 16, "Teach", ct, cl, cb, cd);
    TeachB.Move(192, 416);
-   user->MapKeyToButton(SCAN_T, TeachB);
-  Button LearnB(64, 16, "Learn", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_T, TeachB);
+  Clickey LearnB(64, 16, "Learn", ct, cl, cb, cd);
    LearnB.Move(256, 416);
-   user->MapKeyToButton(SCAN_L, LearnB);
+   input->MapKeyToControl(KEY_L, LearnB);
 
-  StanceB = new Button(64, 16, "Stance", ct, cl, cb, cd);
-   StanceB->Stick(); StanceB->Move(0, 448);
-   user->MapKeyToButton(SCAN_S, *StanceB);
-  Button RunB(64, 16, "Run", ct, cl, cb, cd);
+  StanceB = new Stickey(64, 16, "Stance", ct, cl, cb, cd);
+   StanceB->Move(0, 448);
+   input->MapKeyToControl(KEY_S, *StanceB);
+  Clickey RunB(64, 16, "Run", ct, cl, cb, cd);
    RunB.Move(64, 448);
-   user->MapKeyToButton(SCAN_R, RunB);
-  Button AttB(64, 16, "attack(A)", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_R, RunB);
+  Clickey AttB(64, 16, "attack(A)", ct, cl, cb, cd);
    AttB.Move(128, 448);
-   user->MapKeyToButton(SCAN_A, AttB);
-  Button BashB(64, 16, "bash(Z)", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_A, AttB);
+  Clickey BashB(64, 16, "bash(Z)", ct, cl, cb, cd);
    BashB.Move(192, 448);
-   user->MapKeyToButton(SCAN_Z, BashB);
-  Button KickB(64, 16, "kick(Q)", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_Z, BashB);
+  Clickey KickB(64, 16, "kick(Q)", ct, cl, cb, cd);
    KickB.Move(256, 448);
-   user->MapKeyToButton(SCAN_Q, KickB);
+   input->MapKeyToControl(KEY_Q, KickB);
 
-  FrameB = new Button(192, 16, "Frame by Frame (TAB)", ct, cl, cb, cd);
-   FrameB->Stick(); FrameB->Move(448, 368);
-   user->MapKeyToButton(SCAN_TAB, *FrameB);
-  LeftB = new Button(64, 16, "Left", ct, cl, cb, cd);
+  FrameB = new Stickey(192, 16, "Frame by Frame (TAB)", ct, cl, cb, cd);
+   FrameB->Move(448, 368);
+   input->MapKeyToControl(KEY_TAB, *FrameB);
+  LeftB = new Clickey(64, 16, "Left", ct, cl, cb, cd);
    LeftB->Move(448, 400);
-   user->MapKeyToButton(SCAN_PAD_4, *LeftB);
-  RightB = new Button(64, 16, "Right", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_4, *LeftB);
+  RightB = new Clickey(64, 16, "Right", ct, cl, cb, cd);
    RightB->Move(576, 400);
-   user->MapKeyToButton(SCAN_PAD_6, *RightB);
-  UpB = new Button(64, 16, "Up", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_6, *RightB);
+  UpB = new Clickey(64, 16, "Up", ct, cl, cb, cd);
    UpB->Move(512, 384);
-   user->MapKeyToButton(SCAN_PAD_8, *UpB);
-  DownB = new Button(64, 16, "Down", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_8, *UpB);
+  DownB = new Clickey(64, 16, "Down", ct, cl, cb, cd);
    DownB->Move(512, 416);
-   user->MapKeyToButton(SCAN_PAD_2, *DownB);
-  ClockB = new Button(64, 16, "Clockwise", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_2, *DownB);
+  ClockB = new Clickey(64, 16, "Clockwise", ct, cl, cb, cd);
    ClockB->Move(448, 384);
-   user->MapKeyToButton(SCAN_PAD_9, *ClockB);
-  CClockB = new Button(64, 16, "CntrClkws", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_9, *ClockB);
+  CClockB = new Clickey(64, 16, "CntrClkws", ct, cl, cb, cd);
    CClockB->Move(576, 384);
-   user->MapKeyToButton(SCAN_PAD_7, *CClockB);
-  TopB = new Button(64, 16, "On Top", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_7, *CClockB);
+  TopB = new Clickey(64, 16, "On Top", ct, cl, cb, cd);
    TopB->Move(512, 400);
-   user->MapKeyToButton(SCAN_PAD_5, *TopB);
-  PrevB = new Button(64, 16, "Prev Grap", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_5, *TopB);
+  PrevB = new Clickey(64, 16, "Prev Grap", ct, cl, cb, cd);
    PrevB->Move(448, 416);
-   user->MapKeyToButton(SCAN_PAD_1, *PrevB);
-  NextB = new Button(64, 16, "Next Grap", ct, cl, cb, cd);
+   input->MapKeyToControl(KEY_PAD_1, *PrevB);
+  NextB = new Clickey(64, 16, "Next Grap", ct, cl, cb, cd);
    NextB->Move(576, 416);
-   user->MapKeyToButton(SCAN_PAD_3, *NextB);
+   input->MapKeyToControl(KEY_PAD_3, *NextB);
 
   int NUM_TEAMCOLORS = atc->ysize;
-  Button *Clrs1[NUM_TEAMCOLORS], *Clrs2[NUM_TEAMCOLORS];
+  Clickey *Clrs1[NUM_TEAMCOLORS], *Clrs2[NUM_TEAMCOLORS];
   for(ctr=0; ctr<NUM_TEAMCOLORS; ctr++)  {
-    Clrs1[ctr] = new Button(16, 16, "", 0,
-	atc->image[ctr][0], atc->image[ctr][1], atc->image[ctr][0]);
+    Clrs1[ctr] = new Clickey(16, 16, "", 0,
+	atc->image[ctr].uc[0], atc->image[ctr].uc[1], atc->image[ctr].uc[0]);
     Clrs1[ctr]->Move(624-16*ctr, 448);
     }
   for(ctr=0; ctr<NUM_TEAMCOLORS; ctr++)  {
-    Clrs2[ctr] = new Button(16, 16, "", 0,
-	atc->image[ctr][0], atc->image[ctr][1], atc->image[ctr][0]);
+    Clrs2[ctr] = new Clickey(16, 16, "", 0,
+	atc->image[ctr].uc[0], atc->image[ctr].uc[1], atc->image[ctr].uc[0]);
     Clrs2[ctr]->Move(624-16*ctr, 464);
     }
 
-  screen->ShowScreen();
+  screen->Show();
   screen->RefreshFast();
   int quit = 0;
-  UserAction act;
+  InputAction *act;
   while(!quit)  {
-    debug_position = 13;
     screen->RefreshFast();
-    debug_position = 14;
-    act = user->Action();
-    debug_position = 15;
-    if(act.Type() == USERACTION_BUTTONRELEASED) {
-      debug_position = 16;
-      if(act.ButtonPressed() == StanceB->SpriteNumber())  {
+//    static int tmp = 0;
+//    ++tmp;
+//    if(tmp > 1000000) quit = 1;
+//    }
+//  if(0) {
+    do { screen->Refresh(); act = input->NextAction(); } while(act==NULL);
+    if(act->g.type == INPUTACTION_CONTROLUP) {
+      if(act->c.control == StanceB->Number())  {
 	if(stance) UnStance();
 	}
       else {
 	WeaponManipEvent(act);
 	}
       }
-    else if(act.Type() == USERACTION_BUTTONPRESSED) {
-      debug_position = 17;
-      if(act.ButtonPressed() >= Clrs1[0]->SpriteNumber()
-	    && act.ButtonPressed() <= Clrs1[7]->SpriteNumber())  {
-	int sel =  act.ButtonPressed() - Clrs1[0]->SpriteNumber();
-	remap[tc->image[0][0]] = atc->image[sel][0];
-	remap[tc->image[0][1]] = atc->image[sel][1];
+    else if(act->g.type == INPUTACTION_CONTROLDOWN) {
+      if(act->c.control >= Clrs1[0]->Number()
+	    && act->c.control <= Clrs1[9]->Number())  {
+	int sel =  act->c.control - Clrs1[0]->Number();
+	remap[tc->image[0].uc[0]] = atc->image[sel].uc[0];
+	remap[tc->image[0].uc[1]] = atc->image[sel].uc[1];
         g->Erase();  g->Draw();
 	}
-      else if(act.ButtonPressed() >= Clrs2[0]->SpriteNumber()
-	    && act.ButtonPressed() <= Clrs2[7]->SpriteNumber())  {
-	int sel =  act.ButtonPressed() - Clrs2[0]->SpriteNumber();
-	remap[tc->image[1][0]] = atc->image[sel][0];
-	remap[tc->image[1][1]] = atc->image[sel][1];
+      else if(act->c.control >= Clrs2[0]->Number()
+	    && act->c.control <= Clrs2[9]->Number())  {
+	int sel =  act->c.control - Clrs2[0]->Number();
+	remap[tc->image[1].uc[0]] = atc->image[sel].uc[0];
+	remap[tc->image[1].uc[1]] = atc->image[sel].uc[1];
         g->Erase();  g->Draw();
 	}
-      else if(act.ButtonPressed() == StanceB->SpriteNumber())  {
+      else if(act->c.control == StanceB->Number())  {
 	if(!stance) Stance();
 	}
-      else if(act.ButtonPressed() == WalkB.SpriteNumber())  {
+      else if(act->c.control == WalkB.Number())  {
 	if(stance)  UnStance();
 	PlayLoopM(FRAME_WALKL+1);
 	xpos+=4; SetFrame(FRAME_WALKL);
@@ -412,7 +422,7 @@ int Main(int argc, char **argv)  {
 	xpos+=4; SetFrame(FRAME_WALKR);
 //	xpos+=4; ResetFrame();
 	}
-      else if(act.ButtonPressed() == ExtB.SpriteNumber())  {
+      else if(act->c.control == ExtB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_EXTP);
@@ -422,7 +432,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == IgnB.SpriteNumber())  {
+      else if(act->c.control == IgnB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_IGNP);
@@ -432,7 +442,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == FarmB.SpriteNumber())  {
+      else if(act->c.control == FarmB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_FARMP);
@@ -442,7 +452,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == DigB.SpriteNumber())  {
+      else if(act->c.control == DigB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_DIGP);
@@ -452,7 +462,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == ChopB.SpriteNumber())  {
+      else if(act->c.control == ChopB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_CHOPP);
@@ -462,7 +472,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == WorkB.SpriteNumber())  {
+      else if(act->c.control == WorkB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_WORKP);
@@ -472,7 +482,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == BuildB.SpriteNumber())  {
+      else if(act->c.control == BuildB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_BUILDP);
@@ -482,7 +492,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == TeachB.SpriteNumber())  {
+      else if(act->c.control == TeachB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_TEACHP);
@@ -492,7 +502,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == LearnB.SpriteNumber())  {
+      else if(act->c.control == LearnB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_LEARNP);
@@ -502,7 +512,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == MineB.SpriteNumber())  {
+      else if(act->c.control == MineB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_MINEP);
@@ -512,7 +522,7 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == OperB.SpriteNumber())  {
+      else if(act->c.control == OperB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayUp(FRAME_OPERP);
@@ -522,37 +532,37 @@ int Main(int argc, char **argv)  {
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == GrabB.SpriteNumber())  {
+      else if(act->c.control == GrabB.Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
 	PlayLoop(FRAME_GRAB);
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == CastB.SpriteNumber())  {
+      else if(act->c.control == CastB.Number())  {
 	if(stance)  UnStance();
 	PlayLoop(FRAME_CAST);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == PrayB.SpriteNumber())  {
+      else if(act->c.control == PrayB.Number())  {
 	if(stance)  UnStance();
 	PlayLoop(FRAME_PRAY);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == VestB.SpriteNumber())  {
+      else if(act->c.control == VestB.Number())  {
 	if(stance)  UnStance();
 	PlayLoop(FRAME_VEST);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() >= WeapB[0]->SpriteNumber()
-	     && act.ButtonPressed() <= WeapB[MAX_WEAP-1]->SpriteNumber())  {
+      else if(act->c.control >= WeapB[0]->Number()
+	     && act->c.control <= WeapB[MAX_WEAP-1]->Number())  {
 	if(stance)  UnStance();
 	PlayDown(FRAME_STORE);
-	weapon = act.ButtonPressed() - WeapB[0]->SpriteNumber();
+	weapon = act->c.control - WeapB[0]->Number();
 	PlayUp(FRAME_STORE);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == RunB.SpriteNumber())  {
+      else if(act->c.control == RunB.Number())  {
 	if(!stance)  Stance();
 	PlayLoopM((weapon*WEAP_INC)+FRAME_RUNL+1);
 	xpos+=4; ResetFrame();
@@ -560,30 +570,30 @@ int Main(int argc, char **argv)  {
 	xpos+=4; ResetFrame();
 	//Exit(1, "Did reset!\n");
 	}
-      else if(act.ButtonPressed() == AttB.SpriteNumber())  {
+      else if(act->c.control == AttB.Number())  {
 	if(!stance)  Stance();
 	PlayUp((weapon*WEAP_INC)+FRAME_ATTP);
 	PlayUp((weapon*WEAP_INC)+FRAME_ATT);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == KickB.SpriteNumber())  {
+      else if(act->c.control == KickB.Number())  {
 	if(!stance)  Stance();
 	PlayUp((weapon*WEAP_INC)+FRAME_KICKP);
 	PlayUp((weapon*WEAP_INC)+FRAME_KICK);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == BashB.SpriteNumber())  {
+      else if(act->c.control == BashB.Number())  {
 	if(!stance)  Stance();
 	PlayUp((weapon*WEAP_INC)+FRAME_BASHP);
 	PlayUp((weapon*WEAP_INC)+FRAME_BASH);
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == ResetB.SpriteNumber())  {
+      else if(act->c.control == ResetB.Number())  {
 	xpos=100;
 	stance=0;
 	ResetFrame();
 	}
-      else if(act.ButtonPressed() == RebuildB.SpriteNumber())  {
+      else if(act->c.control == RebuildB.Number())  {
 	int ctr;
 	for(ctr=0; ctr<FRAME_MAX; ctr++)  {
 	  if(vfn[ctr] != NULL)  {
@@ -594,12 +604,13 @@ int Main(int argc, char **argv)  {
 	    }
 	  }
 	}
-      else if(act.ButtonPressed() == SaveB.SpriteNumber())  {
+      else if(act->c.control == SaveB.Number())  {
 	int ctr;
 	NewResFile crf(ResourceFile);
 	CharBag ver(4);
 	ver[0] = VER1; ver[1] = VER2; ver[2] = VER3; ver[3] = VER4;
 	crf.Add(&ver);
+	crf.Add(tc);
 	Graphic *tmpg1, *tmpg2;
 	for(ctr=0; ctr<FRAME_MAX; ctr++)  {
 	  crf.Add(gg[ctr]);
@@ -612,7 +623,7 @@ int Main(int argc, char **argv)  {
 	  crf.Add(gv[ctr]);
 	  }
 	}
-      else if(act.ButtonPressed() == QuitB.SpriteNumber()) {
+      else if(act->c.control == QuitB.Number()) {
 	quit++;
 	}
       else {
@@ -624,8 +635,8 @@ int Main(int argc, char **argv)  {
       QuickResetFrame();
       WeaponManipEvent(act);
       }
-    debug_position = 20;
     }
+  Exit(0);
   return 0;
   }
 
@@ -636,8 +647,8 @@ void QuickResetFrame()  {
   g->SetPriority(1000);
   g->Move(xpos, 100);
   DrawWeapon();
-  if((!stance) && StanceB->IsPressed())  StanceB->StealthClick();
-  else if(stance && (!StanceB->IsPressed()))  StanceB->StealthClick();
+  if((!stance) && StanceB->State())  StanceB->SetState(0);
+  else if(stance && (!StanceB->State()))  StanceB->SetState(1);
   screen->Refresh();
   }
 
@@ -775,14 +786,14 @@ void Stance() {
   PlayDown(weapon*WEAP_INC + FRAME_STANCE);
   stance=1;
   ResetFrame();
-  if(!StanceB->IsPressed()) StanceB->StealthClick();
+  if(!StanceB->State()) StanceB->SetState(1);
   }
 
 void UnStance() {
   PlayUp(weapon*WEAP_INC + FRAME_STANCE+1);
   stance=0;
   ResetFrame();
-  if(StanceB->IsPressed()) StanceB->StealthClick();
+  if(StanceB->State()) StanceB->SetState(0);
   }
 
 void DrawWeapon()  {
@@ -796,73 +807,76 @@ void DrawWeapon()  {
   }
 
 void OnFrame()  {
-  if(!FrameB->IsPressed()) return;
+  if(!FrameB->State()) return;
+  printf("Still In (%d)!\n", FrameB->State());
   space->Move(320, 240);
-  while(user->IsPressed(SCAN_SPACE)) ManipWeapon();
-  while(!user->IsPressed(SCAN_SPACE)) ManipWeapon();
+  while(key->IsPressed(KEY_SPACE)) ManipWeapon();
+  while(!key->IsPressed(KEY_SPACE)) ManipWeapon();
   space->Erase();
+  printf("Done!\n");
   }
 
-void WeaponManipEvent(UserAction act)  {
-  if(act.Type() == USERACTION_KEYPRESSED) {
-    if(act.Key() >= SCAN_F1 && act.Key() <= SCAN_F10)  {
-      int sl = act.Key() - SCAN_F1;
-      if(act.ModKeyPressed(0) || act.ModKeyPressed(1))  {
-	mem[sl][0] = (*gv[frame])[0];
-	mem[sl][1] = (*gv[frame])[1];
-	mem[sl][2] = (*gv[frame])[2];
-	mem[sl][3] = (*gv[frame])[3];
-	}
-      else {
-	(*gv[frame])[0] = mem[sl][0];
-	(*gv[frame])[1] = mem[sl][1];
-	(*gv[frame])[2] = mem[sl][2];
-	(*gv[frame])[3] = mem[sl][3];
-	DrawWeapon();
-	}
-      }
-    }
-  if(act.Type() != USERACTION_BUTTONPRESSED) return;
-  else if(act.ButtonPressed() == LeftB->SpriteNumber())  {
+void WeaponManipEvent(InputAction *act)  {
+//  if(act->g.type == INPUTACTION_KEYDOWN) {
+//    if(act->Key() >= KEY_F1 && act->Key() <= KEY_F10)  {
+//      int sl = act->Key() - KEY_F1;
+//      if(act->ModKeyPressed(0) || act->ModKeyPressed(1))  {
+//	mem[sl][0] = (*gv[frame])[0];
+//	mem[sl][1] = (*gv[frame])[1];
+//	mem[sl][2] = (*gv[frame])[2];
+//	mem[sl][3] = (*gv[frame])[3];
+//	}
+//      else {
+//	(*gv[frame])[0] = mem[sl][0];
+//	(*gv[frame])[1] = mem[sl][1];
+//	(*gv[frame])[2] = mem[sl][2];
+//	(*gv[frame])[3] = mem[sl][3];
+//	DrawWeapon();
+//	}
+//      }
+//    }
+  if(act->g.type != INPUTACTION_CONTROLDOWN) return;
+  else if(act->c.control == LeftB->Number())  {
     (*gv[frame])[1]--;  DrawWeapon();
     }
-  else if(act.ButtonPressed() == RightB->SpriteNumber())  {
+  else if(act->c.control == RightB->Number())  {
     (*gv[frame])[1]++;  DrawWeapon();
     }
-  else if(act.ButtonPressed() == UpB->SpriteNumber())  {
+  else if(act->c.control == UpB->Number())  {
     (*gv[frame])[2]--;  DrawWeapon();
     }
-  else if(act.ButtonPressed() == DownB->SpriteNumber())  {
+  else if(act->c.control == DownB->Number())  {
     (*gv[frame])[2]++;  DrawWeapon();
     }
-  else if(act.ButtonPressed() == PrevB->SpriteNumber())  {
+  else if(act->c.control == PrevB->Number())  {
     if((*gv[frame])[0] > -1)  {
       (*gv[frame])[0]--;
       if((*gv[frame])[0] > 10 && (*gv[frame])[0] < 256)  (*gv[frame])[0] = -1;
       DrawWeapon();
       }
     }
-  else if(act.ButtonPressed() == NextB->SpriteNumber())  {
+  else if(act->c.control == NextB->Number())  {
     if(((*gv[frame])[0] & 255) < 8 || (*gv[frame])[0] < 0)  {
       (*gv[frame])[0]++;  DrawWeapon();
       }
     }
-  else if(act.ButtonPressed() == TopB->SpriteNumber())  {
+  else if(act->c.control == TopB->Number())  {
     (*gv[frame])[0] ^= 256;  s->Erase(); DrawWeapon();
     }
-  else if(act.ButtonPressed() == ClockB->SpriteNumber())  {
+  else if(act->c.control == ClockB->Number())  {
     (*gv[frame])[3] += 256;  DrawWeapon();
     }
-  else if(act.ButtonPressed() == CClockB->SpriteNumber())  {
+  else if(act->c.control == CClockB->Number())  {
     (*gv[frame])[3] -= 256;  DrawWeapon();
     }
   }
 
 void ManipWeapon()  {
   screen->Refresh();
-  UserAction act = user->Action();
-  while(act.Type() != USERACTION_NONE)  {
-    WeaponManipEvent(act);
-    act = user->Action();
-    }
+  InputAction *act;
+  do { screen->Refresh(); act = input->NextAction(); } while(act==NULL);
+//  while(act->g.type != INPUTACTION_NONE)  {
+//    WeaponManipEvent(act);
+//    act = input->NextAction();
+//    }
   }

@@ -1,7 +1,7 @@
 #define VER1 1
 #define VER2 0
-#define VER3 3
-#define VER4 3
+#define VER3 4
+#define VER4 0
 
 #define FRAME_MAX 4096
 #define FRAME_STAND	0

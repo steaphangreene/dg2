@@ -59,6 +59,10 @@ void Cell::SetupTerrainGraphics()  {
   int t;
   Graphic *fireg = new Graphic("graphics/fire.bmp");
   Graphic *smokeg = new Graphic("graphics/smoke.bmp");
+  fireg->tcolor = 33;
+  smokeg->tcolor = 33;
+  *fireg = fireg->DoubleX();
+  *smokeg = smokeg->DoubleX();
   for(t=0; t<TERRAIN_MAX; t++)  {
     char *name = NULL;
     switch(t)  {
@@ -100,11 +104,12 @@ void Cell::SetupTerrainGraphics()  {
 	break;
       }
     pics[t][2][1][0] = new Graphic(name);
-    pics[t][2][0][0] = new Graphic(pics[t][2][1][0]->Hashed());
+    *pics[t][2][1][0] = pics[t][2][1][0]->DoubleX();
+    pics[t][2][0][0] = new Graphic(pics[t][2][1][0]->Hashed(0));
     pics[t][1][1][0] = new Graphic(pics[t][2][1][0]->HalfSize());
-    pics[t][1][0][0] = new Graphic(pics[t][1][1][0]->Hashed());
+    pics[t][1][0][0] = new Graphic(pics[t][1][1][0]->Hashed(0));
     pics[t][0][1][0] = new Graphic(pics[t][1][1][0]->HalfSize());
-    pics[t][0][0][0] = new Graphic(pics[t][0][1][0]->Hashed());
+    pics[t][0][0][0] = new Graphic(pics[t][0][1][0]->Hashed(0));
 
     if(t != TERRAIN_VOID)  {
       pics[t][2][1][1] = new Graphic(*pics[t][2][1][0] + *smokeg);
@@ -114,16 +119,16 @@ void Cell::SetupTerrainGraphics()  {
       pics[t][2][1][1] = new Graphic(*pics[t][2][1][0]);
       pics[t][2][1][2] = new Graphic(*pics[t][2][1][0]);
       }
-    pics[t][2][0][1] = new Graphic(pics[t][2][1][0]->Hashed());
+    pics[t][2][0][1] = new Graphic(pics[t][2][1][0]->Hashed(0));
     pics[t][1][1][1] = new Graphic(pics[t][2][1][1]->HalfSize());
-    pics[t][1][0][1] = new Graphic(pics[t][1][1][0]->Hashed());
+    pics[t][1][0][1] = new Graphic(pics[t][1][1][0]->Hashed(0));
     pics[t][0][1][1] = new Graphic(pics[t][1][1][1]->HalfSize());
-    pics[t][0][0][1] = new Graphic(pics[t][0][1][0]->Hashed());
-    pics[t][2][0][2] = new Graphic(pics[t][2][1][0]->Hashed());
+    pics[t][0][0][1] = new Graphic(pics[t][0][1][0]->Hashed(0));
+    pics[t][2][0][2] = new Graphic(pics[t][2][1][0]->Hashed(0));
     pics[t][1][1][2] = new Graphic(pics[t][2][1][2]->HalfSize());
-    pics[t][1][0][2] = new Graphic(pics[t][1][1][0]->Hashed());
+    pics[t][1][0][2] = new Graphic(pics[t][1][1][0]->Hashed(0));
     pics[t][0][1][2] = new Graphic(pics[t][1][1][2]->HalfSize());
-    pics[t][0][0][2] = new Graphic(pics[t][0][1][0]->Hashed());
+    pics[t][0][0][2] = new Graphic(pics[t][0][1][0]->Hashed(0));
     }
   delete fireg;
   GraphicsInitialized = 1;
@@ -266,7 +271,6 @@ void Cell::ReScaleme()  {
   }
 
 void Cell::ReAlignme(int x, int y)  {
-  x=y; //UNUSED!!!
   Changed[thingnum] = 1;
   }
 
@@ -283,8 +287,9 @@ void Cell::DrawMyMini()  {
   int yp, xp, vt = Terrain();
   for(xp=xb; xp < xm; xp++)  {
     for(yp=yb; yp < ym; yp++)  {
-      screen->BSetPoint(gm.mxorig+xp, gm.myorig+yp, pics[vt &
-	(discovered*255)][gmode[cmode].xstep/32][visible][0]->image[0][0]);
+      screen->SetPoint(gm.mxorig+xp, gm.myorig+yp, pics[vt &
+	(discovered*255)][gmode[cmode].xstep/32][visible][0]->image[0].uc[0]);
+		// **************** 8-bit hardcode...
       }
     }
   }
@@ -307,22 +312,23 @@ int Cell::IsPath()  {
   }
 
 void Cell::DrawMe()  {
-  int x1, x2, y1, y2;
-  x1=((xcoord-gm.xstart)-1)*gm.xstep>>1;
-  x2=x1+gm.xstep;
-  y1=(ycoord-gm.ystart)*gm.ystep-(gm.ystep>>1);
-  y2=y1+gm.ystep;
-  if(x1<0) x1=0;
-  if(y1<0) y1=0;
-  x1+=gm.xorig;
-  x2+=gm.xorig;
-  y1+=gm.yorig;
-  y2+=gm.yorig;
-  if(x2>gm.xedge) x2=gm.xedge;
-  if(y2>gm.yedge) y2=gm.yedge;
-  if((x1>=x2) || (y1>=y2))  return;
-//  Exit(1, "Nope, got here!  (%d, %d)->(%d, %d)\n"x1, y1, x2, y2);
-  curmap->Draw(x1, y1, x2, y2);
+  curmap->DrawCell(xcoord, ycoord);
+//  int x1, x2, y1, y2;
+//  x1=((xcoord-gm.xstart)-1)*gm.xstep>>1;
+//  x2=x1+gm.xstep;
+//  y1=(ycoord-gm.ystart)*gm.ystep-(gm.ystep>>1);
+//  y2=y1+gm.ystep;
+//  if(x1<0) x1=0;
+//  if(y1<0) y1=0;
+//  x1+=gm.xorig;
+//  x2+=gm.xorig;
+//  y1+=gm.yorig;
+//  y2+=gm.yorig;
+//  if(x2>gm.xedge) x2=gm.xedge;
+//  if(y2>gm.yedge) y2=gm.yedge;
+//  if((x1>=x2) || (y1>=y2))  return;
+////  Exit(1, "Nope, got here!  (%d, %d)->(%d, %d)\n"x1, y1, x2, y2);
+//  curmap->Draw(x1, y1, x2, y2);
   }
 
 void Cell::updateme()  {
@@ -372,21 +378,15 @@ Thing *Cell::Owner(int v1)  {
   }
 
 int Cell::Claim(Thing *in, int alt, int ht)  {
-//  debug_position = 3100;
   int up=ht/2, down=ht;
-//  debug_position = 3101;
   if(in->Location(0) != NULL)
     if(alt < ((Cell *)in->Location(0)->Location(0))->WaterLevel()) up=ht+1;
-//  debug_position = 3102;
   if((WaterDepth() > 0) && alt-down <= WaterLevel()) down+=WaterDepth();
-//  debug_position = 3103;
   return Claim(in, alt, ht, up, down);
   }
 
 int Cell::Claim(Thing *in, int alt, int ht, int up, int down)  {
-//  debug_position = 3110;
   if(Claimed(in)) return(1==1);
-//  debug_position = 3111;
   if(dibs[0] == in || dibs[1] == in)  {
     if(dibs[0] == NULL) dibs[0] = in;
     else if(dibs[1] == NULL) dibs[1] = in;
@@ -394,23 +394,19 @@ int Cell::Claim(Thing *in, int alt, int ht, int up, int down)  {
     return(1==1);
     }
 //Exit(1, "Claiming half-claimed Cell!!!\r\n");
-//  debug_position = 3112;
   if(dibs[0] != NULL || dibs[1] != NULL)
     return (1==2);
 
-//  debug_position = 3113;
   if(inside[0] != NULL && inside[0]->Type() == THING_STRUCT &&
     ((Structure*)inside[0])->StructType() == STRUCT_RAMP)
       down += 9;
 
-//  debug_position = 3114;
   if(in->Location(0) != NULL)  {
     if(in->Location(0) != NULL && in->Location(0)->Inside(0) != NULL &&
       in->Location(0)->Inside(0)->Type() == THING_STRUCT &&
       ((Structure*)in->Location(0)->Inside(0))->StructType() == STRUCT_RAMP)
         up += 9;
     }
-//  debug_position = 3115;
   Thing *tmpt = this;
   while(((Cell*)tmpt)->inside[0] != NULL)  {
     if(tmpt->Inside(0) != in && tmpt->Inside(1) != in)  {
@@ -430,14 +426,11 @@ int Cell::Claim(Thing *in, int alt, int ht, int up, int down)  {
       }
     tmpt = tmpt->Inside(0);
     }
-//  debug_position = 3120;
   if(tmpt->Height() > alt+up || tmpt->Height() < alt-down
       || (((Cell*)tmpt)->height > ((ht)/2) && tmpt->Type() == THING_CREATURE))
     return (1==2);
-//  debug_position = 3125;
   dibs[0] = in;
   dibs[1] = in;
-//  debug_position = 3130;
   return (1==1);
   }
 
@@ -450,7 +443,6 @@ int Cell::ClaimHalf(Thing *in, char cdir, int alt, int ht)  {
   }
 
 int Cell::ClaimHalf(Thing *in, char cdir, int alt, int ht, int up, int down)  {
-  ht=ht; //UNUSED!!!
   if(ClaimedHalf(in))  return(1==1);
   if(dibs[0] != NULL && dibs[1] != NULL)  return (1==2);
 
@@ -520,8 +512,6 @@ int Cell::AddMaterials(int type, int ammt)  {
   }
 
 IntList Cell::CellsAtRange(int rng1, int rng2, int fac, int arcsz)  {
-  fac=fac;     // UNUSED!
-  arcsz=arcsz; // UNUSED!
   IntList ret;
 /*
   Cell *cur[6];

@@ -47,12 +47,12 @@ typedef int Command;
 
 class Player  {
   public:
-  Player(char);
+  Player(int, char, int, int);
   ~Player();
   void AddToSelectList(Thing *);
   void RemoveFromSelectList(Thing *);
-  void Select(UserAction);
-  void OrderSelected(Command, UserAction);
+  void Select(InputAction *, IntList &);
+  void OrderSelected(Command, InputAction *);
   int NumSelected()  {return Selectsize; };
   int IsInSelectList(Thing *);
   int IsEnemy(Thing *);
@@ -78,13 +78,15 @@ class Player  {
   void SelectEnemyCreatures(IntList *v);
   void SelectCreatures(IntList *v);
   void RefigureSpellcasters();
-  char *GetCMap();
-  void SetCMap(char *);
+  void SetTeamColors(int, int);
+  int TeamColor1();
+  int TeamColor2();
+  int Number() { return number; };
 
   private:
   void CommandSelected(Action *tmpa);
   void ResetInput();
-  void DoSpecial(UserAction &);
+  void DoSpecial(InputAction *);
   void ClearSelectList();
   Thing **Selectlist;
   int Selectsize;
@@ -94,11 +96,12 @@ class Player  {
   IntList *workinglist;
   int intparam[4];
   IntList listparam[4];
-  char cmap[256];
   Sprite output;
   Sprite outval[16];
   char shown;
   int oldval[16];
+  int tcol1, tcol2;
+  int number;
   };
 
 #endif

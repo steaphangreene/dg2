@@ -10,6 +10,7 @@ class Game  {
   void SlowDown();
   void SpeedUp();
   void SetSpeed();
+  int NumPlayers();
 
   private:
   int SPEED;
@@ -25,6 +26,7 @@ class Game  {
   int num_players;
   char quit;
   friend class Player;
+  friend class Creature;
   };
 
 #endif

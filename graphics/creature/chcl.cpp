@@ -13,12 +13,11 @@ int main(int argc, char **argv)  {
     if(access(argv[ctr], R_OK))
 	Exit(1, "Hey, \"%s\" isn't there!\n", argv[ctr]);
     Graphic tmpg(argv[ctr]);
-    Palette pl;
-    pl.GetBMPPalette(argv[ctr]);
+    Palette pl(argv[ctr]);
     for(ctry=0; ctry<(int)tmpg.ysize; ctry++)  {
       for(ctrx=0; ctrx<(int)tmpg.xsize; ctrx++)  {
-	if(tmpg.image[ctry][ctrx] == c1)
-	  tmpg.image[ctry][ctrx] = c2;
+	if(tmpg.image[ctry].uc[ctrx] == c1)
+	  tmpg.image[ctry].uc[ctrx] = c2;
 	}
       }
     tmpg.SaveBMP(argv[ctr], pl);

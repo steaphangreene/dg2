@@ -7,8 +7,7 @@ int main(int argc, char **argv)  {
   for(ctr=1; ctr<argc; ctr++)  {
     if(access(argv[ctr], R_OK))
 	Exit(1, "Hey, \"%s\" isn't there!\n", argv[ctr]);
-    Palette pl;
-    pl.GetBMPPalette(argv[ctr]);
+    Palette pl(argv[ctr]);
     Graphic tmpg(argv[ctr]);
     Graphic saveg(tmpg.RotatedCounterClock());
     saveg.SaveBMP(argv[ctr], pl);

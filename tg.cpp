@@ -2,8 +2,8 @@
 
 int main(int argc, char **argv)  {
   Screen screen(1024, 768);
-  User user;
-  screen.GetBMPPalette("graphics/creature/guy/walk00.bmp");
+  Keyboard key;
+  screen.SetPalette("graphics/creature/guy/walkl00.bmp");
   Graphic *sw[4];
   sw[0] = new Graphic("graphics/creature/guy/sword/base.bmp");
   sw[1] = new Graphic("graphics/creature/guy/sword/ready00.bmp");
@@ -11,7 +11,7 @@ int main(int argc, char **argv)  {
   sw[3] = new Graphic("graphics/creature/guy/sword/ready02.bmp");
   sw[4] = NULL;
   Graphic *gg[128];
-  gg[0] = new Graphic("graphics/creature/guy/walk00.bmp");
+  gg[0] = new Graphic("graphics/creature/guy/walkl00.bmp");
   gg[1] = new Graphic("graphics/creature/guy/walkl01.bmp");
   gg[2] = new Graphic("graphics/creature/guy/walkl02.bmp");
   gg[3] = new Graphic("graphics/creature/guy/walkl03.bmp");
@@ -38,7 +38,7 @@ int main(int argc, char **argv)  {
   gg[24] = new Graphic("graphics/creature/guy/walkl24.bmp");
   gg[25] = new Graphic("graphics/creature/guy/walkl25.bmp");
   gg[26] = NULL;
-  gg[32] = new Graphic("graphics/creature/guy/walk00.bmp");
+  gg[32] = new Graphic("graphics/creature/guy/walkr00.bmp");
   gg[33] = new Graphic("graphics/creature/guy/walkr01.bmp");
   gg[34] = new Graphic("graphics/creature/guy/walkr02.bmp");
   gg[35] = new Graphic("graphics/creature/guy/walkr03.bmp");
@@ -75,19 +75,16 @@ int main(int argc, char **argv)  {
   for(ctr=64; gg[ctr]!=NULL; ctr++) gg[ctr]->FindTrueCenter();
   for(ctr=0; sw[ctr]!=NULL; ctr++) sw[ctr]->FindTrueCenter();
   Sprite g, s;
-  int tcolor = gg[0]->image[0][0];
-  g.SetTransparentColor(tcolor);
   g.UseImage(gg[0]);
   g.SetPriority(1000);
   g.Move(100, 100);
-  s.SetTransparentColor(tcolor);
   s.UseImage(sw[0]);
   s.SetPriority(1001);
   s.Move(100, 100);
-  screen.ShowScreen();
+  screen.Show();
   screen.Refresh();
   screen.SetFrameRate(80);
-  while(!user.IsPressed(SCAN_SPACE));
+  while(!key.IsPressed(KEY_SPACE));
   for(ctr=0; gg[ctr]!= NULL; ++ctr)  {
     g.UseImage(gg[ctr]);
     g.Move(xpos, 100);
@@ -151,5 +148,5 @@ int main(int argc, char **argv)  {
     s.Move(xpos, 100);
     screen.Refresh();
     }
-  while(!user.IsPressed(SCAN_ESC));
+  while(!key.IsPressed(KEY_ESC));
   }

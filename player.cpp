@@ -18,7 +18,8 @@ extern char sprng[64];
 extern GMode gmode[10];
 extern char cmode;
 extern Screen *screen;
-extern User *user;
+extern InputQueue *input;
+extern Keyboard *key;
 extern Map *curmap;
 extern Game *curgame;
 extern Network net;
@@ -119,16 +120,16 @@ int __mb[256];
 
 char s2n[256];
 
-Player::Player(char ptype)  {
+Player::Player(int pnum, char ptype, int c1, int c2)  {
+  number = pnum;
   shown = 0;
-  int ctr;
   type = ptype;
   Selectsize = 0;
   Selectlist = NULL;
   selcast = 0;
   selpray = 0;
-  ResetState();
-  for(ctr=0; ctr<256; ctr++)  cmap[ctr] = ctr;
+  tcol1 = c1;
+  tcol2 = c2;
   if(type == PLAYER_CONSOLE)  {
     bzero((char *)__com, 1024);
     bzero((char *)__sb, 1024);
@@ -137,457 +138,612 @@ Player::Player(char ptype)  {
     bzero((char *)__mb, 1024);
     bzero((char *)s2n, 256);
 
-s2n[SCAN_A]=0; s2n[SCAN_B]=1; s2n[SCAN_C]=2; s2n[SCAN_D]=3; s2n[SCAN_E]=4;
-s2n[SCAN_F]=5; s2n[SCAN_G]=6; s2n[SCAN_H]=7; s2n[SCAN_I]=8; s2n[SCAN_J]=9;
-s2n[SCAN_K]=10; s2n[SCAN_L]=11; s2n[SCAN_M]=12; s2n[SCAN_N]=13; s2n[SCAN_O]=14;
-s2n[SCAN_P]=15; s2n[SCAN_Q]=16; s2n[SCAN_R]=17; s2n[SCAN_S]=18; s2n[SCAN_T]=19;
-s2n[SCAN_U]=20; s2n[SCAN_V]=21; s2n[SCAN_W]=22; s2n[SCAN_X]=23; s2n[SCAN_Z]=24;
+s2n[KEY_A]=0; s2n[KEY_B]=1; s2n[KEY_C]=2; s2n[KEY_D]=3; s2n[KEY_E]=4;
+s2n[KEY_F]=5; s2n[KEY_G]=6; s2n[KEY_H]=7; s2n[KEY_I]=8; s2n[KEY_J]=9;
+s2n[KEY_K]=10; s2n[KEY_L]=11; s2n[KEY_M]=12; s2n[KEY_N]=13; s2n[KEY_O]=14;
+s2n[KEY_P]=15; s2n[KEY_Q]=16; s2n[KEY_R]=17; s2n[KEY_S]=18; s2n[KEY_T]=19;
+s2n[KEY_U]=20; s2n[KEY_V]=21; s2n[KEY_W]=22; s2n[KEY_X]=23; s2n[KEY_Z]=24;
 
-    Button *tmpb;
+    Clickey *tmpb;
     Graphic upbg("graphics/800/buttons/blanks0.bmp");
     Graphic pbg("graphics/800/buttons/blanks1.bmp");
     Graphic pg, upg;
     upbg.FindTrueCenter();	pbg.FindTrueCenter();
-    upbg.tcolor = 0;		pbg.tcolor = 0;
+    upbg.tcolor = 33;		pbg.tcolor = 33;
 
-    Normalg.Trim();	Fleeg.Trim();		Attackg.Trim();
-    Buildg.Trim();  Castg.Trim();  Followg.Trim();  Digg.Trim();
-    Getg.Trim();	Harvestg.Trim();	Igniteg.Trim();
-    Joing.Trim();	Killg.Trim();		Lookg.Trim();
-    Moveg.Trim();	Natureg.Trim();		Patrolg.Trim();
-    Quitg.Trim();	Rung.Trim();		Stopg.Trim();
-    Tailg.Trim();	Workg.Trim();		Extg.Trim();
+    Normalg.Trim();
+    Fleeg.Trim();
+    Attackg.Trim();
+    Buildg.Trim();
+    Castg.Trim();
+    Followg.Trim();
+    Digg.Trim();
+    Getg.Trim();
+    Harvestg.Trim();
+    Igniteg.Trim();
+    Joing.Trim();
+    Killg.Trim();
+    Lookg.Trim();
+    Moveg.Trim();
+    Natureg.Trim();
+    Patrolg.Trim();
+    Quitg.Trim();
+    Rung.Trim();
+    Stopg.Trim();
+    Tailg.Trim();
+    Workg.Trim();
+    Extg.Trim();
 
-    ArrowsSg.Trim();	BlindSg.Trim();		ControlSg.Trim();
-    DisinSg.Trim();	EraseSg.Trim();		FireballSg.Trim();
-    GlobeSg.Trim();	InvisSg.Trim();		JumpSg.Trim();
-    KickbackSg.Trim();	MannaSg.Trim();		NegateSg.Trim();
-    OpenSg.Trim();	ProtectSg.Trim();	QuickSg.Trim();
-    ReopenSg.Trim();	SinkholeSg.Trim();	TeleportSg.Trim();
-    VisionSg.Trim();	WallSg.Trim();		ExtSg.Trim();
+    ArrowsSg.Trim();
+    BlindSg.Trim();
+    ControlSg.Trim();
 
-    BlessNg.Trim();	ControlNg.Trim();	DeathNg.Trim();
-    EarthNg.Trim();	FrenzyNg.Trim();	HealNg.Trim();
-    IceNg.Trim();	LightNg.Trim();		MeteorNg.Trim();
-    PlagueNg.Trim();	RaiseNg.Trim();		SmiteNg.Trim();
-    TsunamiNg.Trim();	UndeathNg.Trim();	WhirlNg.Trim();
+    DisinSg.Trim();
+    EraseSg.Trim();
+    FireballSg.Trim();
+    GlobeSg.Trim();
+    InvisSg.Trim();
+    JumpSg.Trim();
+    KickbackSg.Trim();
+    MannaSg.Trim();
+    NegateSg.Trim();
+    OpenSg.Trim();
+    ProtectSg.Trim();
+    QuickSg.Trim();
+    ReopenSg.Trim();
+    SinkholeSg.Trim();
+    TeleportSg.Trim();
+    VisionSg.Trim();
+    WallSg.Trim();
+    ExtSg.Trim();
+
+    BlessNg.Trim();
+    ControlNg.Trim();
+    DeathNg.Trim();
+    EarthNg.Trim();
+    FrenzyNg.Trim();
+    HealNg.Trim();
+    IceNg.Trim();
+    LightNg.Trim();
+    MeteorNg.Trim();
+    PlagueNg.Trim();
+    RaiseNg.Trim();
+    SmiteNg.Trim();
+    TsunamiNg.Trim();
+    UndeathNg.Trim();
+    WhirlNg.Trim();
     ExcorNg.Trim();
 
-    WallBg.Trim();	BridgeBg.Trim();	RampBg.Trim();
+    WallBg.Trim();
+    BridgeBg.Trim();
+    RampBg.Trim();
 
-    RockMg.Trim();	WoodMg.Trim();
-#define Trim FindTrueCenter
-    Normalg.SetCenter(1,1);	Fleeg.Trim();		Attackg.Trim();
-    Buildg.Trim();  Castg.Trim();  Followg.Trim();  Digg.Trim();
-    Getg.Trim();	Harvestg.Trim();	Igniteg.Trim();
-    Joing.Trim();	Killg.Trim();		Lookg.Trim();
-    Moveg.Trim();	Natureg.Trim();		Patrolg.Trim();
-    Quitg.Trim();	Rung.Trim();		Stopg.Trim();
-    Tailg.Trim();	Workg.Trim();		Extg.Trim();
+    RockMg.Trim();
+    WoodMg.Trim();
 
-    ArrowsSg.Trim();	BlindSg.Trim();		ControlSg.Trim();
-    DisinSg.Trim();	EraseSg.Trim();		FireballSg.Trim();
-    GlobeSg.Trim();	InvisSg.Trim();		JumpSg.Trim();
-    KickbackSg.Trim();	MannaSg.Trim();		NegateSg.Trim();
-    OpenSg.Trim();	ProtectSg.Trim();	QuickSg.Trim();
-    ReopenSg.Trim();	SinkholeSg.Trim();	TeleportSg.Trim();
-    VisionSg.Trim();	WallSg.Trim();		ExtSg.Trim();
+    Normalg.SetCenter(1,1);
+    Fleeg.FindTrueCenter();
+    Attackg.FindTrueCenter();
+    Buildg.FindTrueCenter();
+    Castg.FindTrueCenter();
+    Followg.FindTrueCenter();
+    Digg.FindTrueCenter();
+    Getg.FindTrueCenter();
+    Harvestg.FindTrueCenter();
+    Igniteg.FindTrueCenter();
+    Joing.FindTrueCenter();
+    Killg.FindTrueCenter();
+    Lookg.FindTrueCenter();
+    Moveg.FindTrueCenter();
+    Natureg.FindTrueCenter();
+    Patrolg.FindTrueCenter();
+    Quitg.FindTrueCenter();
+    Rung.FindTrueCenter();
+    Stopg.FindTrueCenter();
+    Tailg.FindTrueCenter();
+    Workg.FindTrueCenter();
+    Extg.FindTrueCenter();
 
-    BlessNg.Trim();	ControlNg.Trim();	DeathNg.Trim();
-    EarthNg.Trim();	FrenzyNg.Trim();	HealNg.Trim();
-    IceNg.Trim();	LightNg.Trim();		MeteorNg.Trim();
-    PlagueNg.Trim();	RaiseNg.Trim();		SmiteNg.Trim();
-    TsunamiNg.Trim();	UndeathNg.Trim();	WhirlNg.Trim();
-    ExcorNg.Trim();
+    ArrowsSg.FindTrueCenter();
+    BlindSg.FindTrueCenter();
+    ControlSg.FindTrueCenter();
 
-    WallBg.Trim();	BridgeBg.Trim();	RampBg.Trim();
+    DisinSg.FindTrueCenter();
+    EraseSg.FindTrueCenter();
+    FireballSg.FindTrueCenter();
+    GlobeSg.FindTrueCenter();
+    InvisSg.FindTrueCenter();
+    JumpSg.FindTrueCenter();
+    KickbackSg.FindTrueCenter();
+    MannaSg.FindTrueCenter();
+    NegateSg.FindTrueCenter();
+    OpenSg.FindTrueCenter();
+    ProtectSg.FindTrueCenter();
+    QuickSg.FindTrueCenter();
+    ReopenSg.FindTrueCenter();
+    SinkholeSg.FindTrueCenter();
+    TeleportSg.FindTrueCenter();
+    VisionSg.FindTrueCenter();
+    WallSg.FindTrueCenter();
+    ExtSg.FindTrueCenter();
 
-    RockMg.Trim();	WoodMg.Trim();
-#undef Trim
+    BlessNg.FindTrueCenter();
+    ControlNg.FindTrueCenter();
+    DeathNg.FindTrueCenter();
+    EarthNg.FindTrueCenter();
+    FrenzyNg.FindTrueCenter();
+    HealNg.FindTrueCenter();
+    IceNg.FindTrueCenter();
+    LightNg.FindTrueCenter();
+    MeteorNg.FindTrueCenter();
+    PlagueNg.FindTrueCenter();
+    RaiseNg.FindTrueCenter();
+    SmiteNg.FindTrueCenter();
+    TsunamiNg.FindTrueCenter();
+    UndeathNg.FindTrueCenter();
+    WhirlNg.FindTrueCenter();
+    ExcorNg.FindTrueCenter();
+
+    WallBg.FindTrueCenter();
+    BridgeBg.FindTrueCenter();
+    RampBg.FindTrueCenter();
+
+    RockMg.FindTrueCenter();
+    WoodMg.FindTrueCenter();
+
+    Normalg.tcolor = 33;
+    Fleeg.tcolor = 33;
+    Attackg.tcolor = 33;
+    Buildg.tcolor = 33;
+    Castg.tcolor = 33;
+    Followg.tcolor = 33;
+    Digg.tcolor = 33;
+    Getg.tcolor = 33;
+    Harvestg.tcolor = 33;
+    Igniteg.tcolor = 33;
+    Joing.tcolor = 33;
+    Killg.tcolor = 33;
+    Lookg.tcolor = 33;
+    Moveg.tcolor = 33;
+    Natureg.tcolor = 33;
+    Patrolg.tcolor = 33;
+    Quitg.tcolor = 33;
+    Rung.tcolor = 33;
+    Stopg.tcolor = 33;
+    Tailg.tcolor = 33;
+    Workg.tcolor = 33;
+    Extg.tcolor = 33;
+
+    ArrowsSg.tcolor = 33;
+    BlindSg.tcolor = 33;
+    ControlSg.tcolor = 33;
+
+    DisinSg.tcolor = 33;
+    EraseSg.tcolor = 33;
+    FireballSg.tcolor = 33;
+    GlobeSg.tcolor = 33;
+    InvisSg.tcolor = 33;
+    JumpSg.tcolor = 33;
+    KickbackSg.tcolor = 33;
+    MannaSg.tcolor = 33;
+    NegateSg.tcolor = 33;
+    OpenSg.tcolor = 33;
+    ProtectSg.tcolor = 33;
+    QuickSg.tcolor = 33;
+    ReopenSg.tcolor = 33;
+    SinkholeSg.tcolor = 33;
+    TeleportSg.tcolor = 33;
+    VisionSg.tcolor = 33;
+    WallSg.tcolor = 33;
+    ExtSg.tcolor = 33;
+
+    BlessNg.tcolor = 33;
+    ControlNg.tcolor = 33;
+    DeathNg.tcolor = 33;
+    EarthNg.tcolor = 33;
+    FrenzyNg.tcolor = 33;
+    HealNg.tcolor = 33;
+    IceNg.tcolor = 33;
+    LightNg.tcolor = 33;
+    MeteorNg.tcolor = 33;
+    PlagueNg.tcolor = 33;
+    RaiseNg.tcolor = 33;
+    SmiteNg.tcolor = 33;
+    TsunamiNg.tcolor = 33;
+    UndeathNg.tcolor = 33;
+    WhirlNg.tcolor = 33;
+    ExcorNg.tcolor = 33;
+
+    WallBg.tcolor = 33;
+    BridgeBg.tcolor = 33;
+    RampBg.tcolor = 33;
+
+    RockMg.tcolor = 33;
+    WoodMg.tcolor = 33;
 
     pbg.SetCenter(pbg.xcenter+2, pbg.ycenter+2);
 
     upg = upbg+Fleeg;		pg = pbg+Fleeg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 193);		__com[SCAN_BQUOTE] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 193);		__com[KEY_BQUOTE] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Moveg;		pg = pbg+Moveg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 223);		__com[SCAN_M] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 223);		__com[KEY_M] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Lookg;		pg = pbg+Lookg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 283);	__com[SCAN_L] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 283);	__com[KEY_L] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Patrolg;		pg = pbg+Patrolg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 223);	__com[SCAN_P] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 223);	__com[KEY_P] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Rung;		pg = pbg+Rung;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 193);	__com[SCAN_R] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 193);	__com[KEY_R] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 
     upg = upbg+Buildg;		pg = pbg+Buildg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 253);		__com[SCAN_B] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 253);		__com[KEY_B] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Castg;		pg = pbg+Castg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 313);		__com[SCAN_C] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 313);		__com[KEY_C] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Digg;		pg = pbg+Digg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 253);	__com[SCAN_D] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 253);	__com[KEY_D] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Natureg;		pg = pbg+Natureg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 313);	__com[SCAN_N] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 313);	__com[KEY_N] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Getg;		pg = pbg+Getg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 283);		__com[SCAN_G] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 283);		__com[KEY_G] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Followg;		pg = pbg+Followg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 223);	__com[SCAN_F] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 223);	__com[KEY_F] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Tailg;		pg = pbg+Tailg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 223);	__com[SCAN_T] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 223);	__com[KEY_T] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 
     upg = upbg+Harvestg;	pg = pbg+Harvestg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 253);	__com[SCAN_H] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 253);	__com[KEY_H] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Workg;		pg = pbg+Workg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 253);	__com[SCAN_W] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 253);	__com[KEY_W] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Extg;		pg = pbg+Extg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 253);	__com[SCAN_X] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 253);	__com[KEY_X] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Quitg;		pg = pbg+Quitg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 313);	__com[SCAN_Q] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 313);	__com[KEY_Q] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 
     upg = upbg+Attackg;		pg = pbg+Attackg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 193);	__com[SCAN_A] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 193);	__com[KEY_A] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Killg;		pg = pbg+Killg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 193);	__com[SCAN_K] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 193);	__com[KEY_K] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Igniteg;		pg = pbg+Igniteg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 193);	__com[SCAN_I] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 193);	__com[KEY_I] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Joing;		pg = pbg+Joing;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 223);	__com[SCAN_J] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 223);	__com[KEY_J] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+Stopg;		pg = pbg+Stopg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 313);	__com[SCAN_S] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 313);	__com[KEY_S] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 
     upg = upbg+ArrowsSg;	pg = pbg+ArrowsSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 193);		__sb[SCAN_A] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 193);		__sb[KEY_A] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+BlindSg;		pg = pbg+BlindSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 193);	__sb[SCAN_B] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 193);	__sb[KEY_B] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ControlSg;	pg = pbg+ControlSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 193);	__sb[SCAN_C] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 193);	__sb[KEY_C] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+DisinSg;		pg = pbg+DisinSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 193);	__sb[SCAN_D] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 193);	__sb[KEY_D] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+EraseSg;		pg = pbg+EraseSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 193);	__sb[SCAN_E] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 193);	__sb[KEY_E] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+FireballSg;	pg = pbg+FireballSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 223);		__sb[SCAN_F] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 223);		__sb[KEY_F] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+GlobeSg;		pg = pbg+GlobeSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 223);	__sb[SCAN_G] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 223);	__sb[KEY_G] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+InvisSg;		pg = pbg+InvisSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 223);	__sb[SCAN_I] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 223);	__sb[KEY_I] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+JumpSg;		pg = pbg+JumpSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 223);	__sb[SCAN_J] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 223);	__sb[KEY_J] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+KickbackSg;	pg = pbg+KickbackSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 253);		__sb[SCAN_K] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 253);		__sb[KEY_K] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+MannaSg;		pg = pbg+MannaSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 253);	__sb[SCAN_M] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 253);	__sb[KEY_M] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+NegateSg;	pg = pbg+NegateSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 253);	__sb[SCAN_N] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 253);	__sb[KEY_N] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+OpenSg;		pg = pbg+OpenSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 253);	__sb[SCAN_O] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 253);	__sb[KEY_O] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ProtectSg;	pg = pbg+ProtectSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 283);		__sb[SCAN_P] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 283);		__sb[KEY_P] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+QuickSg;		pg = pbg+QuickSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 283);	__sb[SCAN_Q] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 283);	__sb[KEY_Q] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ReopenSg;	pg = pbg+ReopenSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 283);	__sb[SCAN_R] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 283);	__sb[KEY_R] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+SinkholeSg;	pg = pbg+SinkholeSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 283);	__sb[SCAN_S] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 283);	__sb[KEY_S] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+TeleportSg;	pg = pbg+TeleportSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 283);	__sb[SCAN_T] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 283);	__sb[KEY_T] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+VisionSg;	pg = pbg+VisionSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 313);	__sb[SCAN_V] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 313);	__sb[KEY_V] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+WallSg;		pg = pbg+WallSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 313);	__sb[SCAN_W] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 313);	__sb[KEY_W] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ExtSg;		pg = pbg+ExtSg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 313);	__sb[SCAN_X] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 313);	__sb[KEY_X] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 
     upg = upbg+BlessNg;		pg = pbg+BlessNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 193);	__nb[SCAN_B] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 193);	__nb[KEY_B] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ControlNg;	pg = pbg+ControlNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 193);	__nb[SCAN_C] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 193);	__nb[KEY_C] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+DeathNg;		pg = pbg+DeathNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 193);	__nb[SCAN_D] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 193);	__nb[KEY_D] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+EarthNg;		pg = pbg+EarthNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 193);	__nb[SCAN_E] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 193);	__nb[KEY_E] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+FrenzyNg;	pg = pbg+FrenzyNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 223);		__nb[SCAN_F] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 223);		__nb[KEY_F] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+HealNg;		pg = pbg+HealNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 223);	__nb[SCAN_H] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 223);	__nb[KEY_H] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+IceNg;		pg = pbg+IceNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 223);	__nb[SCAN_I] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 223);	__nb[KEY_I] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+LightNg;		pg = pbg+LightNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 253);	__nb[SCAN_L] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 253);	__nb[KEY_L] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+MeteorNg;	pg = pbg+MeteorNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 253);	__nb[SCAN_M] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 253);	__nb[KEY_M] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+PlagueNg;	pg = pbg+PlagueNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 283);		__nb[SCAN_P] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 283);		__nb[KEY_P] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+RaiseNg;		pg = pbg+RaiseNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 283);	__nb[SCAN_R] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 283);	__nb[KEY_R] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+SmiteNg;		pg = pbg+SmiteNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 283);	__nb[SCAN_S] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 283);	__nb[KEY_S] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+TsunamiNg;	pg = pbg+TsunamiNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(125, 283);	__nb[SCAN_T] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(125, 283);	__nb[KEY_T] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+UndeathNg;	pg = pbg+UndeathNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 313);		__nb[SCAN_U] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 313);		__nb[KEY_U] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+WhirlNg;		pg = pbg+WhirlNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 313);	__nb[SCAN_W] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 313);	__nb[KEY_W] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+ExcorNg;		pg = pbg+ExcorNg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(95, 313);	__nb[SCAN_X] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(95, 313);	__nb[KEY_X] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+WallBg;		pg = pbg+WallBg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 193);		__bb[SCAN_W] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 193);		__bb[KEY_W] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+RampBg;		pg = pbg+RampBg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 193);	__bb[SCAN_R] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 193);	__bb[KEY_R] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+BridgeBg;	pg = pbg+BridgeBg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(65, 193);	__bb[SCAN_B] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(65, 193);	__bb[KEY_B] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+RockMg;		pg = pbg+RockMg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(5, 193);		__mb[SCAN_R] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(5, 193);		__mb[KEY_R] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
     upg = upbg+WoodMg;		pg = pbg+WoodMg;
     upg.SetCenter(0, 0);	pg.SetCenter(0, 0);
-    tmpb = new Button();	tmpb->SetImage(upg, pg);
-    tmpb->Move(35, 193);	__mb[SCAN_W] = tmpb->SpriteNumber();
+    tmpb = new Clickey();	tmpb->SetImage(upg, pg);
+    tmpb->Move(35, 193);	__mb[KEY_W] = tmpb->Number();
     tmpb->Erase();		tmpb->Disable();
 
 #define Trim SetCenter
@@ -633,28 +789,29 @@ Player::~Player()  {
     delete Selectlist;
     }
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
       delete cb;
       }
     if(__sb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__sb[ctr]);
+      cb = (Clickey*)screen->GetSpriteByNumber(__sb[ctr]);
       delete cb;
       }
     if(__nb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__nb[ctr]);
+      cb = (Clickey*)screen->GetSpriteByNumber(__nb[ctr]);
       delete cb;
       }
     if(__bb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__bb[ctr]);
+      cb = (Clickey*)screen->GetSpriteByNumber(__bb[ctr]);
       delete cb;
       }
     }
   }
 
 void Player::TakeTurn(int pkg)  {
+  Debug("Player::TakeTurn(): Begin");
   int SIGNAL_MENU[2];
   SIGNAL_MENU[0] = -1;
   SIGNAL_MENU[1] = 1;
@@ -670,12 +827,15 @@ void Player::TakeTurn(int pkg)  {
 	}
       } break;
     case(PLAYER_CONSOLE):  {
+      Debug("Player::TakeTurn(): PLAYER_CONSOLE: Start");
       int rescale = 0;
       int realignx = 0;
       int realigny = 0;
-      UserAction curact;
+      InputAction *curact;
+      Debug("Player::TakeTurn(): Talk()");
       if(multi)  things.StartTalk();
       else  things.ClearTalk();
+      Debug("Player::TakeTurn(): doing...");
       if(doing == DOING_NORMAL && cur_comm == COMMAND_EXTINGUISH)  {
 	Action *tmpa = new Action(ACTION_EXTINGUISH, intparam[0]);
 	CommandSelected(tmpa);
@@ -774,21 +934,23 @@ void Player::TakeTurn(int pkg)  {
 	  ResetState();
 	  }
 	}
-      curact = user->Action();
-      if(curact.Type() == USERACTION_NONE);
-      else if((curact.Type() == USERACTION_KEYPRESSED && curact.Key() == SCAN_ESC)
-	    || (curact.Type() == USERACTION_MOUSE
-	    && curact.ButtonPressed() == 2
+      Debug("Player::TakeTurn(): NextAction()");
+      curact = input->NextAction();
+      if(curact == NULL)
+	{ curact = new InputAction; curact->g.type = INPUTACTION_NONE; }
+      Debug("Player::TakeTurn(): curact->g.type");
+      if(curact->g.type == INPUTACTION_NONE);
+      else if((curact->g.type == INPUTACTION_KEYDOWN && curact->k.key == KEY_ESC)
+	    || (curact->g.type == INPUTACTION_MOUSEDOWN
+	    && curact->m.button == 3
 	    && cur_comm != COMMAND_DEFAULT))  {
 	ResetState();
 	ResetInput();
-	UserAction tmpa;
-	curact = tmpa;
+	curact->g.type = INPUTACTION_NONE;
 	}
       else if(doing != DOING_NORMAL)  DoSpecial(curact);
-      else if(curact.Type() == USERACTION_KEYPRESSED && curact.Key() == SCAN_Z
-	    && (curact.ModKeyPressed(MOD_LSHIFT)
-	    || curact.ModKeyPressed(MOD_RSHIFT))) {
+      else if(curact->g.type == INPUTACTION_KEYDOWN && curact->k.key == KEY_Z
+	    && curact->g.modkeys) {
         if(((gm.xstep == 32) && (cmode != 0)) || (gm.xstep == 16))  {
 	  gm.xstep *= 2;		gm.ystep *= 2;
 	  gm.xstart += ((gm.xedge-gm.xorig)/gm.xstep) & 252;
@@ -796,7 +958,7 @@ void Player::TakeTurn(int pkg)  {
 	  rescale = 1;
 	  }
         }
-      else if(curact.Type() == USERACTION_KEYPRESSED && curact.Key()==SCAN_Z){
+      else if(curact->g.type == INPUTACTION_KEYDOWN && curact->k.key==KEY_Z){
         if((gm.xstep == 32) || (gm.xstep == 64))  {
 	  gm.xstep /= 2;		gm.ystep /= 2;
 	  gm.xstart -= ((gm.xedge-gm.xorig)/(gm.xstep*2)) & 252;
@@ -810,69 +972,77 @@ void Player::TakeTurn(int pkg)  {
 	  rescale = 1;
 	  }
         }
-      if((!mouse->DrawingBox()) && (user->IsPressed(SCAN_DOWN)
-	  || mouse->YPos() >= ((long)screen->GetYSize()-3))
+
+      Debug("Player::TakeTurn: CheckScroll");
+      if((!mouse->DrawingSelector()) && (key->IsPressed(KEY_DOWN)
+	  || mouse->YPos() >= ((long)screen->YSize()-3))
           && gm.ystart < ((curmap->YSize()-1) -
 		((gm.yedge - gm.yorig)/gm.ystep)))  {
         realigny = 1;
         }
-      else if((!mouse->DrawingBox()) && (user->IsPressed(SCAN_UP) || 
+      else if((!mouse->DrawingSelector()) && (key->IsPressed(KEY_UP) || 
 	  mouse->YPos() <= 2) && gm.ystart > 0)  {
         realigny = -1;
         }
-      if((!mouse->DrawingBox()) && (user->IsPressed(SCAN_LEFT) ||
+      if((!mouse->DrawingSelector()) && (key->IsPressed(KEY_LEFT) ||
 	  mouse->XPos() <= 2) && gm.xstart > 0)  {
         realignx = -1;
         }
-      else if((!mouse->DrawingBox()) && (user->IsPressed(SCAN_RIGHT)
-          || mouse->XPos() >= ((long)screen->GetXSize()-3))
+      else if((!mouse->DrawingSelector()) && (key->IsPressed(KEY_RIGHT)
+          || mouse->XPos() >= ((long)screen->XSize()-3))
           && (gm.xstart/2) < ((curmap->XSize()-1) -
 		((gm.xedge-gm.xorig)/gm.xstep)))  {
         realignx = 1;
         }
-      if(curact.Type() == USERACTION_KEYPRESSED && 
-	  (curact.Key() == SCAN_EQUALS || curact.Key() == SCAN_GREY_PLUS)) {
+
+      Debug("Player::TakeTurn(): Check Zoom");
+      if(curact->g.type == INPUTACTION_KEYDOWN && 
+	  (curact->k.key == KEY_EQUALS || curact->k.key == KEY_GREY_PLUS)) {
 	curgame->SpeedUp();
         }
-      else if(curact.Type() == USERACTION_KEYPRESSED &&
-	  (curact.Key() == SCAN_MINUS || curact.Key() == SCAN_GREY_MINUS)) {
+      else if(curact->g.type == INPUTACTION_KEYDOWN &&
+	  (curact->k.key == KEY_MINUS || curact->k.key == KEY_GREY_MINUS)) {
 	curgame->SlowDown();
         }
 
-      if(curact.Type() == USERACTION_MOUSE)  {
-        if(curact.Pan() == mainp)  {
-	  if(curact.ButtonPressed() == 3)  {
+      Debug("Player::TakeTurn(): Check Select/Command");
+      if(curact->g.type == INPUTACTION_MOUSEDOWN)  {
+	IntList selected = screen->CollideRectangle(
+	    curact->m.x, curact->m.y, curact->m.xs, curact->m.ys);
+        if(curact->m.panel == mainp)  {
+	  if(curact->m.button == 2)  {
 	    }
-	  else  if(cur_comm == COMMAND_DEFAULT && curact.ButtonPressed() == 2)  {
+	  else  if(cur_comm == COMMAND_DEFAULT && curact->m.button == 3)  {
 	    OrderSelected(cur_comm, curact);
             }
-	  else  if(cur_comm == COMMAND_FOLLOW && curact.ButtonPressed() == 1)  {
+	  else  if(cur_comm == COMMAND_FOLLOW && curact->m.button == 1)  {
 	    OrderSelected(cur_comm, curact);
             }
-	  else  if(curact.Size() < 1)  {
+	  else  if(selected.Size() < 1)  {
 	    }
-	  else  if(cur_comm == COMMAND_DEFAULT && curact.ButtonPressed() == 1)  {
-	    Select(curact);
+	  else  if(cur_comm == COMMAND_DEFAULT && curact->m.button == 1)  {
+	    Select(curact, selected);
             }
-	  else  if(curact.ButtonPressed() == 2)  {
+	  else  if(curact->m.button == 3)  {
             }
 	  else  {
 	    OrderSelected(cur_comm, curact);
 	    }
 	  cur_comm = COMMAND_DEFAULT;
 	  }
-        else  if(curact.Pan() == minip)  {
-	  if(curact.ButtonPressed() == 2)  {
+        else  if(curact->m.panel == minip)  {
+	  if(curact->m.button == 3)  {
 	    OrderSelected(COMMAND_MINIDEFAULT, curact);
 	    }
-	  else if(curact.ButtonPressed() == 1)  {
-	    while((user->NextAction() != NULL)
-		&& (user->NextAction()->Pan() == minip) 
-		&& (user->NextAction()->ButtonPressed() == 1))  {
-	      curact=user->Action();
+	  else if(curact->m.button == 1)  {
+	    while((input->PeekNextAction() != NULL)
+		&& (input->PeekNextAction()->g.type == INPUTACTION_MOUSEDOWN) 
+		&& (input->PeekNextAction()->m.panel == minip) 
+		&& (input->PeekNextAction()->m.button == 1))  {
+	      curact=input->NextAction();
 	      }
-	    int x=curact.Startx();
-	    int y=curact.Starty();
+	    int x=curact->m.x;
+	    int y=curact->m.y;
 	    curmap->Mini2Cell(x, y);
 	    x-=((gm.xsize/gm.xstep)/2);
 	    y-=((gm.ysize/gm.ystep)/2);
@@ -894,44 +1064,45 @@ void Player::TakeTurn(int pkg)  {
 	  }
         }
 
+      Debug("Player::TakeTurn(): realignx || realigny");
       if(realignx || realigny)  {
         if((realignx*2) < (gm.xsize)/gm.xstep && 
 		(realigny*2) < (gm.ysize/2)/gm.ystep && 
 		(-realignx*2) < (gm.xsize)/gm.xstep && 
 		(-realigny*2) < (gm.ysize/2)/gm.ystep)  {
-	  screen->ScrollPanel32(mainp, realignx*(gm.xstep/16),
+	  screen->ScrollPanel(mainp, realignx*(2*gm.xstep),
 		realigny*(2*gm.ystep));
 	  }
-        else  {
-	  screen->ErasePanelSprites(mainp);
-	  }
+//        else  {
+//	  screen->ErasePanelSprites(mainp);
+//	  }
         gm.xstart+=4*realignx;
         gm.ystart+=2*realigny;
         curmap->ReAlign(realignx, realigny);
         }
       if(rescale)  {
         screen->ErasePanelSprites(mainp);
-        screen->ErasePanelBackground(mainp);
         curmap->ReScale();
         }
 
-      if(curact.Type() == USERACTION_BUTTONPRESSED
-		&& curact.ButtonPressed() == MainButtonNum) {
+      Debug("Player::TakeTurn(): Command Buttons");
+      if(curact->g.type == INPUTACTION_CONTROLDOWN
+		&& curact->c.control == MainButtonNum) {
         cur_comm = COMMAND_DEFAULT;
         }
-      else  if(curact.Type() == USERACTION_SYSTEM_QUIT
-		|| (curact.Type() == USERACTION_BUTTONRELEASED
-		&& curact.ButtonPressed() == MainButtonNum)) {
+      else  if(curact->g.type == INPUTACTION_SYSTEM_QUIT
+		|| (curact->g.type == INPUTACTION_CONTROLUP
+		&& curact->c.control == MainButtonNum)) {
         if(multi)  net.Send(SIGNAL_MENU, SIGNAL_SIZE);
         curgame->Menus();
         }
-      else if(curact.Type() == USERACTION_BUTTONPRESSED && NumSelected() > 0) {
-	if(curact.ButtonPressed() == __com[SCAN_A])  cur_comm = COMMAND_ATTACK;
-	else if(curact.ButtonPressed()==__com[SCAN_K])
+      else if(curact->g.type == INPUTACTION_CONTROLDOWN && NumSelected() > 0) {
+	if(curact->c.control == __com[KEY_A])  cur_comm = COMMAND_ATTACK;
+	else if(curact->c.control==__com[KEY_K])
 	  cur_comm = COMMAND_KILL;
-	else if(curact.ButtonPressed()==__com[SCAN_F])
+	else if(curact->c.control==__com[KEY_F])
 	  cur_comm = COMMAND_FOLLOW;
-	else if(curact.ButtonPressed()==__com[SCAN_S])  {
+	else if(curact->c.control==__com[KEY_S])  {
 	  int ctr;
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
 	    Action *tmpa = new Action(ACTION_STOP);
@@ -939,23 +1110,23 @@ void Player::TakeTurn(int pkg)  {
 	    }
 	  cur_comm = COMMAND_DEFAULT;
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_L])  {
+	else if(curact->c.control==__com[KEY_L])  {
 	  cur_comm = COMMAND_LOOK;
 	  SelectThing(&intparam[0]);
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_I])  {
+	else if(curact->c.control==__com[KEY_I])  {
 	  cur_comm = COMMAND_IGNITE;
 	  SelectCell(&intparam[0]);
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_X])  {
+	else if(curact->c.control==__com[KEY_X])  {
 	  cur_comm = COMMAND_EXTINGUISH;
 	  SelectCell(&intparam[0]);
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_D])  {
+	else if(curact->c.control==__com[KEY_D])  {
 	  cur_comm = COMMAND_DIG;
 	  SelectLCells(&listparam[0]);
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_Q])  {
+	else if(curact->c.control==__com[KEY_Q])  {
 	  int ctr;
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
 	    Action *tmpa = new Action(ACTION_STOP_SPELLS);
@@ -963,24 +1134,24 @@ void Player::TakeTurn(int pkg)  {
 	    }
 	  cur_comm = COMMAND_DEFAULT;
 	  }
-	else if(curact.ButtonPressed()==__com[SCAN_H])  {
+	else if(curact->c.control==__com[KEY_H])  {
 	  cur_comm = COMMAND_HARVEST;
 	  intparam[0] = -1;
 	  PickMaterial(&intparam[0]);
 	  argstate = 1;	  }
-	else if(curact.ButtonPressed()==__com[SCAN_B])  {
+	else if(curact->c.control==__com[KEY_B])  {
 	  cur_comm = COMMAND_BUILD;
 	  PickStructure(&intparam[0]);
 	  argstate = 1;	  }
-	else if(curact.ButtonPressed()==__com[SCAN_N])  {
+	else if(curact->c.control==__com[KEY_N])  {
 	  cur_comm = COMMAND_PRAY;
 	  PickPrayer(&intparam[0]);
 	  argstate = 1;	  }
-	else if(curact.ButtonPressed()==__com[SCAN_C])  {
+	else if(curact->c.control==__com[KEY_C])  {
 	  cur_comm = COMMAND_CAST;
 	  PickSpell(&intparam[0]);
 	  argstate = 1;	  }
-	else if(curact.ButtonPressed()==__com[SCAN_BQUOTE]){
+	else if(curact->c.control==__com[KEY_BQUOTE]){
 	  int ctr;
 	  for(ctr = 0; ctr < Selectsize; ctr++)  {
 	    Action *tmpa = new Action(ACTION_FLEE,
@@ -991,12 +1162,12 @@ void Player::TakeTurn(int pkg)  {
 	  }
 	}
 
+      Debug("Player::TakeTurn(): Multi ");
       if(multi)  {
 	if(!pkg) things.Talk();
 	else  things.EndTalk();
 	}
-      things.tick();
-      things.update();
+      Debug("Player::TakeTurn(): Pick Correct Cursor ");
       switch(cur_comm)  {
 	case COMMAND_DEFAULT:	mouse->SetCursor(&Normalg);	break;
 	case COMMAND_ATTACK:	mouse->SetCursor(&Attackg);	break;
@@ -1011,15 +1182,17 @@ void Player::TakeTurn(int pkg)  {
 	case COMMAND_IGNITE:	mouse->SetCursor(&Igniteg);	break;
 	case COMMAND_DIG:	mouse->SetCursor(&Digg);	break;
 	}
+      Debug("Player::TakeTurn(): Print Stats");
       if(Selectsize == 1)  {
-	Graphic tmpg;
+	static Graphic status_graphic;
+	static color white = screen->GetPalette().GetClosestColor(255,255,255);
 	Creature *ind = (Creature*)Selectlist[0];
 	int cgl = 0;
 	if(ind->goal[0] != NULL)  cgl = ind->goal[0]->Goal();
 	if(!shown)  {
-	  tmpg = screen->gprintf(0, 255,
+	  screen->CGPrint(&status_graphic, 0, 0, 0, white,
 		"Altitude:\nHeight:\nHit:\nStamina:\nGoal:\nMaterial:\n Ammt:");
-	  output.SetImage(tmpg);
+	  output.SetImage(status_graphic);
 	  output.Move(7, 350);
 	  oldval[0] = ind->altitude;
 	  oldval[1] = ind->height;
@@ -1028,79 +1201,71 @@ void Player::TakeTurn(int pkg)  {
 	  oldval[4] = cgl;
 	  oldval[5] = ind->mat_type;
 	  oldval[6] = ind->mat_ammt;
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[0]);
-	  outval[0].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[0]);
+	  outval[0].SetImage(status_graphic);
 	  outval[0].Move(64, 350);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[1]);
-	  outval[1].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[1]);
+	  outval[1].SetImage(status_graphic);
 	  outval[1].Move(64, 362);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[2]);
-	  outval[2].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[2]);
+	  outval[2].SetImage(status_graphic);
 	  outval[2].Move(64, 374);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[3]);
-	  outval[3].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[3]);
+	  outval[3].SetImage(status_graphic);
 	  outval[3].Move(64, 386);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[4]);
-	  outval[4].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[4]);
+	  outval[4].SetImage(status_graphic);
 	  outval[4].Move(64, 398);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[5]);
-	  outval[5].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[5]);
+	  outval[5].SetImage(status_graphic);
 	  outval[5].Move(64, 410);
-	  tmpg = screen->gprintf(0, 255, "%d", oldval[6]);
-	  outval[6].SetImage(tmpg);
+	  screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[6]);
+	  outval[6].SetImage(status_graphic);
 	  outval[6].Move(64, 422);
 	  shown = 1;
-	  screen->RefreshFast();
 	  }
 	else  {
 	  if(oldval[0] != ind->altitude)  {
 	    oldval[0] = ind->altitude;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[0]);
-	    outval[0].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[0]);
+	    outval[0].SetImage(status_graphic);
 	    outval[0].Move(64, 350);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[1] != ind->height)  {
 	    oldval[1] = ind->height;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[1]);
-	    outval[1].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[1]);
+	    outval[1].SetImage(status_graphic);
 	    outval[1].Move(64, 362);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[2] != ind->hit)  {
 	    oldval[2] = ind->hit;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[2]);
-	    outval[2].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[2]);
+	    outval[2].SetImage(status_graphic);
 	    outval[2].Move(64, 374);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[3] != ind->fatigue)  {
 	    oldval[3] = ind->fatigue;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[3]);
-	    outval[3].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[3]);
+	    outval[3].SetImage(status_graphic);
 	    outval[3].Move(64, 386);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[4] != cgl)  {
 	    oldval[4] = cgl;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[4]);
-	    outval[4].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[4]);
+	    outval[4].SetImage(status_graphic);
 	    outval[4].Move(64, 398);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[5] != ind->mat_type)  {
 	    oldval[5] = ind->mat_type;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[5]);
-	    outval[5].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[5]);
+	    outval[5].SetImage(status_graphic);
 	    outval[5].Move(64, 410);
-	    screen->RefreshFast();
 	    }
 	  if(oldval[6] != ind->mat_ammt)  {
 	    oldval[6] = ind->mat_ammt;
-	    tmpg = screen->gprintf(0, 255, "%d", oldval[6]);
-	    outval[6].SetImage(tmpg);
+	    screen->CGPrintf(&status_graphic, 0, 0, 0, white, "%d", oldval[6]);
+	    outval[6].SetImage(status_graphic);
 	    outval[6].Move(64, 422);
-	    screen->RefreshFast();
 	    }
 	  }
 	}
@@ -1113,25 +1278,28 @@ void Player::TakeTurn(int pkg)  {
 	outval[4].Erase();
 	outval[5].Erase();
 	outval[6].Erase();
-	screen->RefreshFast();
 	shown = 0;
 	}
-      if(rescale || realignx || realigny)  screen->RefreshFull();
-      else  screen->Refresh();
+//      Debug("Player::TakeTurn(): Refresh()");
+//      if(rescale || realignx || realigny)  screen->RefreshFull();
+//      else  screen->Refresh();
+      Debug("Player::TakeTurn(): PLAYER_CONSOLE: End");
       } break;
     case(PLAYER_COMPUTER):  {
       } break;
     }
+  Debug("Player::TakeTurn(): End");
   }
 
-void Player::OrderSelected(Command com, UserAction ma)  {
+void Player::OrderSelected(Command com, InputAction *ma)  {
   if(Selectsize < 1)  return;
-  if(com == COMMAND_MINIDEFAULT)  ma.Clear();
+  IntList mas = screen->CollideRectangle(ma->m.x, ma->m.y, ma->m.xs, ma->m.ys);
+  if(com == COMMAND_MINIDEFAULT)  mas.Clear();
   int ctr;
 
   int tmpc;
-  int x1=ma.Startx(), y1=ma.Starty();
-  int x2=ma.Endx(), y2=ma.Endy();
+  int x1=ma->m.x, y1=ma->m.y;
+  int x2=x1+ma->m.xs, y2=y1+ma->m.ys;
   if(com == COMMAND_MINIDEFAULT)  {
     curmap->Mini2Cell(x1, y1);
     curmap->Mini2Cell(x2, y2);
@@ -1152,24 +1320,24 @@ void Player::OrderSelected(Command com, UserAction ma)  {
     }
   if((x1 < 0) || (x2 < 0)) return;
 
-  if(ma.ButtonPressed() == 2)  {
-    for(ctr=0; ctr<ma.Size(); ctr++)  {
+  if(ma->m.button == 3)  {
+    for(ctr=0; ctr<mas.Size(); ctr++)  {
       Thing *tmpt;
-      tmpt = things.FindBySpriteNumber(ma[ctr]);
+      tmpt = things.FindBySpriteNumber(mas[ctr]);
       if(tmpt == NULL || tmpt->Type() != THING_CREATURE)  {
-	ma -= ma[ctr];
+	mas -= mas[ctr];
 	ctr--;
 	}
       }
     }
 
-  if((ma.ButtonPressed() == 2) || (com != COMMAND_DEFAULT))  {
-    if(ma.Size() > 0 && com != COMMAND_FOLLOW)  {
+  if((ma->m.button == 3) || (com != COMMAND_DEFAULT))  {
+    if(mas.Size() > 0 && com != COMMAND_FOLLOW)  {
       int whoop = 0;
       IntList whooped, hit;
       Creature *tst;
-      for(ctr = 0; ctr < ma.Size(); ctr++)  {
-	tst = (Creature *)(things.FindBySpriteNumber(ma[ctr]));
+      for(ctr = 0; ctr < mas.Size(); ctr++)  {
+	tst = (Creature *)(things.FindBySpriteNumber(mas[ctr]));
 	hit += tst->Number();
 	if(tst != NULL && IsEnemy(tst))  {
 	  whoop++;
@@ -1203,10 +1371,10 @@ void Player::OrderSelected(Command com, UserAction ma)  {
       }
     if(com == COMMAND_FOLLOW)  {
       int handled = 0;
-      if(ma.Size() > 0)  {
+      if(mas.Size() > 0)  {
         IntList who;
-	for(ctr = 0; ctr < ma.Size(); ctr++)  {
-	  int per = Selectlist[0]->FindBySpriteNumber(ma[ctr])->Number();
+	for(ctr = 0; ctr < mas.Size(); ctr++)  {
+	  int per = Selectlist[0]->FindBySpriteNumber(mas[ctr])->Number();
 	  if(things.GetThingByNumber(per)->Type() == THING_CREATURE)
 		who += per;
 	  }
@@ -1237,8 +1405,8 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 		(x1==((Cell *)((Creature *)Selectlist[0])->Location(0))->XCoord()>>1) &&
 		(y1==((Cell *)((Creature *)Selectlist[0])->Location(0))->YCoord()))  {
 	int xd, yd, xneg, yneg, ndir;
-	xd = ma.Startx() - ((Cell *)((Creature *)Selectlist[0])->Location(0))->XPos();
-	yd = ma.Starty() - ((Cell *)((Creature *)Selectlist[0])->Location(0))->YPos();
+	xd = ma->m.x - ((Cell *)((Creature *)Selectlist[0])->Location(0))->XPos();
+	yd = ma->m.y - ((Cell *)((Creature *)Selectlist[0])->Location(0))->YPos();
 	xneg = 0;         yneg = 0;
 	if(xd < 0)  { xd=-xd; xneg = 1; }
 	if(yd < 0)  { yd=-yd; yneg = 1; }
@@ -1345,13 +1513,14 @@ void Player::AddToSelectList(Thing *in)  {
   }
 
 
-void Player::Select(UserAction ma)  {
+void Player::Select(InputAction *ma, IntList &mas)  {
   Thing *sel;
   int mod = 0, ctr, said = 0;
-  for(ctr=0; ctr<ma.Size(); ctr++)  {
-    sel = things.FindBySpriteNumber(ma[ctr]);
+  for(ctr=0; ctr<mas.Size(); ctr++)  {
+    sel = things.FindBySpriteNumber(mas[ctr]);
     if(sel != NULL)  {
       if(((Creature *)sel)->Owner() == this)  {
+/*
 	if(ma.ModKeyPressed(MOD_RCTRL) || ma.ModKeyPressed(MOD_LCTRL))  {
 	  sel->ToggleSelect();
 	  if((!said) && (((Creature *)sel)->IsSelected())
@@ -1369,7 +1538,7 @@ void Player::Select(UserAction ma)  {
 	    said = 1;
 	    }
 	  }
-	else  {
+	else ********** */ {
 	  if(mod == 0)  {
 	    ClearSelectList();
 	    mod=1;
@@ -1386,99 +1555,100 @@ void Player::Select(UserAction ma)  {
   RefigureSpellcasters();
   }
 
-void Player::DoSpecial(UserAction &curact)  {
+void Player::DoSpecial(InputAction *curact)  {
+  IntList selected;
+  if(curact->g.type == INPUTACTION_MOUSEDOWN)
+    selected = screen->CollideRectangle(
+	    curact->m.x, curact->m.y, curact->m.xs, curact->m.ys);
   switch(doing)  {
     case(DOING_PICKPRAYER):  {
       int key = -1;
-      if(curact.Type() == USERACTION_KEYPRESSED) key = curact.Key();
-      else if(curact.Type() == USERACTION_BUTTONPRESSED)  {
+      if(curact->g.type == INPUTACTION_KEYDOWN) key = curact->k.key;
+      else if(curact->g.type == INPUTACTION_CONTROLDOWN)  {
 	int ctr;
 	for(ctr=0; ctr<256; ctr++) {
-	  if(curact.ButtonPressed() == __nb[ctr]) key = ctr;
+	  if(curact->c.control == __nb[ctr]) key = ctr;
 	  }
 	}
       if(key >= 0)  {
 	switch(key)  {
-	  case(SCAN_A): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_B): *workingint = PRAYER_BLESS;		break;
-	  case(SCAN_C): *workingint = PRAYER_CONTROL_UNDEAD;	break;
-	  case(SCAN_D): *workingint = PRAYER_DEATH;		break;
-	  case(SCAN_E): *workingint = PRAYER_EARTHQUAKE;	break;
-	  case(SCAN_F): *workingint = PRAYER_FRENZY;		break;
-	  case(SCAN_G): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_H): *workingint = PRAYER_HEAL;		break;
-	  case(SCAN_I): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_J): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_K): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_L): *workingint = PRAYER_CALL_LIGHTNING;	break;
-	  case(SCAN_M): *workingint = PRAYER_METEOR_STRIKE;	break;
-	  case(SCAN_N): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_O): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_P): *workingint = PRAYER_PLAGUE;		break;
-	  case(SCAN_Q): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_R): *workingint = PRAYER_RESSURECT;		break;
-	  case(SCAN_S): *workingint = PRAYER_STORM;		break;
-	  case(SCAN_T): *workingint = PRAYER_TSUNAMI;		break;
-	  case(SCAN_U): *workingint = PRAYER_UNDEATH;		break;
-	  case(SCAN_V): *workingint = PRAYER_NONE;		break;
-	  case(SCAN_W): *workingint = PRAYER_WHIRLWIND;		break;
-	  case(SCAN_X): *workingint = PRAYER_EXCORCISM;		break;
-	  case(SCAN_Y): *workingint = PRAYER_NONE;		break;
+	  case(KEY_A): *workingint = PRAYER_NONE;		break;
+	  case(KEY_B): *workingint = PRAYER_BLESS;		break;
+	  case(KEY_C): *workingint = PRAYER_CONTROL_UNDEAD;	break;
+	  case(KEY_D): *workingint = PRAYER_DEATH;		break;
+	  case(KEY_E): *workingint = PRAYER_EARTHQUAKE;	break;
+	  case(KEY_F): *workingint = PRAYER_FRENZY;		break;
+	  case(KEY_G): *workingint = PRAYER_NONE;		break;
+	  case(KEY_H): *workingint = PRAYER_HEAL;		break;
+	  case(KEY_I): *workingint = PRAYER_NONE;		break;
+	  case(KEY_J): *workingint = PRAYER_NONE;		break;
+	  case(KEY_K): *workingint = PRAYER_NONE;		break;
+	  case(KEY_L): *workingint = PRAYER_CALL_LIGHTNING;	break;
+	  case(KEY_M): *workingint = PRAYER_METEOR_STRIKE;	break;
+	  case(KEY_N): *workingint = PRAYER_NONE;		break;
+	  case(KEY_O): *workingint = PRAYER_NONE;		break;
+	  case(KEY_P): *workingint = PRAYER_PLAGUE;		break;
+	  case(KEY_Q): *workingint = PRAYER_NONE;		break;
+	  case(KEY_R): *workingint = PRAYER_RESSURECT;		break;
+	  case(KEY_S): *workingint = PRAYER_STORM;		break;
+	  case(KEY_T): *workingint = PRAYER_TSUNAMI;		break;
+	  case(KEY_U): *workingint = PRAYER_UNDEATH;		break;
+	  case(KEY_V): *workingint = PRAYER_NONE;		break;
+	  case(KEY_W): *workingint = PRAYER_WHIRLWIND;		break;
+	  case(KEY_X): *workingint = PRAYER_EXCORCISM;		break;
+	  case(KEY_Y): *workingint = PRAYER_NONE;		break;
 	  }
-	if(key != SCAN_ESC)  {
-	  UserAction tmpa;
-	  curact = tmpa;
+	if(key != KEY_ESC)  {
+	  curact->g.type = INPUTACTION_NONE;
 	  }
 	if(*workingint >= 0)  {
 //	  printf("Picked Prayer!\r\n");
 	  workingint = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_PICKSTRUCTURE):  {
       int key = -1;
-      if(curact.Type() == USERACTION_KEYPRESSED) key = curact.Key();
-      else if(curact.Type() == USERACTION_BUTTONPRESSED)  {
+      if(curact->g.type == INPUTACTION_KEYDOWN) key = curact->k.key;
+      else if(curact->g.type == INPUTACTION_CONTROLDOWN)  {
 	int ctr;
 	for(ctr=0; ctr<256; ctr++) {
-	  if(curact.ButtonPressed() == __bb[ctr]) key = ctr;
+	  if(curact->c.control == __bb[ctr]) key = ctr;
 	  }
 	}
       if(key >= 0)  {
 	switch(key)  {
-	  case(SCAN_A): *workingint = STRUCT_AQUADUCT;		break;
-	  case(SCAN_B): *workingint = STRUCT_BRIDGE;		break;
-	  case(SCAN_C): *workingint = STRUCT_CART;		break;
-	  case(SCAN_D): *workingint = STRUCT_DRAWBRIDGE;	break;
-	  case(SCAN_E): *workingint = STRUCT_ENCLOSURE;		break;
-	  case(SCAN_F): *workingint = STRUCT_FARMLAND;		break;
-	  case(SCAN_G): *workingint = STRUCT_GATE;		break;
-	  case(SCAN_H): *workingint = STRUCT_HULL;		break;
-	  case(SCAN_I): *workingint = STRUCT_IRRIGATION_DITCH;	break;
-	  case(SCAN_J): *workingint = -1;			break;
-	  case(SCAN_K): *workingint = -1;			break;
-	  case(SCAN_L): *workingint = -1;			break;
-	  case(SCAN_M): *workingint = STRUCT_MACHINE;		break;
-	  case(SCAN_N): *workingint = -1;			break;
-	  case(SCAN_O): *workingint = -1;			break;
-	  case(SCAN_P): *workingint = STRUCT_PATH;		break;
-	  case(SCAN_Q): *workingint = -1;			break;
-	  case(SCAN_R): *workingint = STRUCT_RAMP;		break;
-	  case(SCAN_S): *workingint = STRUCT_SEIGE_ENGINE;	break;
-	  case(SCAN_T): *workingint = STRUCT_TOWER;		break;
-	  case(SCAN_U): *workingint = -1;			break;
-	  case(SCAN_V): *workingint = -1;			break;
-	  case(SCAN_W): *workingint = STRUCT_WALL;		break;
-	  case(SCAN_Y): *workingint = -1;			break;
-	  case(SCAN_X): *workingint = -1;			break;
+	  case(KEY_A): *workingint = STRUCT_AQUADUCT;		break;
+	  case(KEY_B): *workingint = STRUCT_BRIDGE;		break;
+	  case(KEY_C): *workingint = STRUCT_CART;		break;
+	  case(KEY_D): *workingint = STRUCT_DRAWBRIDGE;	break;
+	  case(KEY_E): *workingint = STRUCT_ENCLOSURE;		break;
+	  case(KEY_F): *workingint = STRUCT_FARMLAND;		break;
+	  case(KEY_G): *workingint = STRUCT_GATE;		break;
+	  case(KEY_H): *workingint = STRUCT_HULL;		break;
+	  case(KEY_I): *workingint = STRUCT_IRRIGATION_DITCH;	break;
+	  case(KEY_J): *workingint = -1;			break;
+	  case(KEY_K): *workingint = -1;			break;
+	  case(KEY_L): *workingint = -1;			break;
+	  case(KEY_M): *workingint = STRUCT_MACHINE;		break;
+	  case(KEY_N): *workingint = -1;			break;
+	  case(KEY_O): *workingint = -1;			break;
+	  case(KEY_P): *workingint = STRUCT_PATH;		break;
+	  case(KEY_Q): *workingint = -1;			break;
+	  case(KEY_R): *workingint = STRUCT_RAMP;		break;
+	  case(KEY_S): *workingint = STRUCT_SEIGE_ENGINE;	break;
+	  case(KEY_T): *workingint = STRUCT_TOWER;		break;
+	  case(KEY_U): *workingint = -1;			break;
+	  case(KEY_V): *workingint = -1;			break;
+	  case(KEY_W): *workingint = STRUCT_WALL;		break;
+	  case(KEY_Y): *workingint = -1;			break;
+	  case(KEY_X): *workingint = -1;			break;
 	  }
-	if(key != SCAN_ESC)  {
-	  UserAction tmpa;
-	  curact = tmpa;
+	if(key != KEY_ESC)  {
+	  curact->g.type = INPUTACTION_NONE;
 	  }
 	if(*workingint >= 0)  {
 //	  printf("Picked Struct!\r\n");
@@ -1490,44 +1660,43 @@ void Player::DoSpecial(UserAction &curact)  {
       }break;
     case(DOING_PICKMATERIAL):  {
       int key = -1;
-      if(curact.Type() == USERACTION_KEYPRESSED) key = curact.Key();
-      else if(curact.Type() == USERACTION_BUTTONPRESSED)  {
+      if(curact->g.type == INPUTACTION_KEYDOWN) key = curact->k.key;
+      else if(curact->g.type == INPUTACTION_CONTROLDOWN)  {
 	int ctr;
 	for(ctr=0; ctr<256; ctr++) {
-	  if(curact.ButtonPressed() == __mb[ctr]) key = ctr;
+	  if(curact->c.control == __mb[ctr]) key = ctr;
 	  }
 	}
       if(key >= 0)  {
 	switch(key)  {
-	  case(SCAN_A): *workingint = MATERIAL_ADM;	break;
-	  case(SCAN_B): *workingint = MATERIAL_BRONZE;	break;
-	  case(SCAN_C): *workingint = -1;		break;
-	  case(SCAN_D): *workingint = MATERIAL_DIRT;	break;
-	  case(SCAN_E): *workingint = -1;		break;
-	  case(SCAN_F): *workingint = -1;		break;
-	  case(SCAN_G): *workingint = -1;		break;
-	  case(SCAN_H): *workingint = -1;		break;
-	  case(SCAN_I): *workingint = MATERIAL_IRON;	break;
-	  case(SCAN_J): *workingint = -1;		break;
-	  case(SCAN_K): *workingint = -1;		break;
-	  case(SCAN_L): *workingint = -1;		break;
-	  case(SCAN_M): *workingint = -1;		break;
-	  case(SCAN_N): *workingint = -1;		break;
-	  case(SCAN_O): *workingint = -1;		break;
-	  case(SCAN_P): *workingint = -1;		break;
-	  case(SCAN_Q): *workingint = -1;		break;
-	  case(SCAN_R): *workingint = MATERIAL_ROCK;	break;
-	  case(SCAN_S): *workingint = MATERIAL_STEEL;	break;
-	  case(SCAN_T): *workingint = -1;		break;
-	  case(SCAN_U): *workingint = -1;		break;
-	  case(SCAN_V): *workingint = -1;		break;
-	  case(SCAN_W): *workingint = MATERIAL_WOOD;	break;
-	  case(SCAN_Y): *workingint = -1;		break;
-	  case(SCAN_X): *workingint = -1;		break;
+	  case(KEY_A): *workingint = MATERIAL_ADM;	break;
+	  case(KEY_B): *workingint = MATERIAL_BRONZE;	break;
+	  case(KEY_C): *workingint = -1;		break;
+	  case(KEY_D): *workingint = MATERIAL_DIRT;	break;
+	  case(KEY_E): *workingint = -1;		break;
+	  case(KEY_F): *workingint = -1;		break;
+	  case(KEY_G): *workingint = -1;		break;
+	  case(KEY_H): *workingint = -1;		break;
+	  case(KEY_I): *workingint = MATERIAL_IRON;	break;
+	  case(KEY_J): *workingint = -1;		break;
+	  case(KEY_K): *workingint = -1;		break;
+	  case(KEY_L): *workingint = -1;		break;
+	  case(KEY_M): *workingint = -1;		break;
+	  case(KEY_N): *workingint = -1;		break;
+	  case(KEY_O): *workingint = -1;		break;
+	  case(KEY_P): *workingint = -1;		break;
+	  case(KEY_Q): *workingint = -1;		break;
+	  case(KEY_R): *workingint = MATERIAL_ROCK;	break;
+	  case(KEY_S): *workingint = MATERIAL_STEEL;	break;
+	  case(KEY_T): *workingint = -1;		break;
+	  case(KEY_U): *workingint = -1;		break;
+	  case(KEY_V): *workingint = -1;		break;
+	  case(KEY_W): *workingint = MATERIAL_WOOD;	break;
+	  case(KEY_Y): *workingint = -1;		break;
+	  case(KEY_X): *workingint = -1;		break;
 	  }
-	if(key != SCAN_ESC)  {
-	  UserAction tmpa;
-	  curact = tmpa;
+	if(key != KEY_ESC)  {
+	  curact->g.type = INPUTACTION_NONE;
 	  }
 	if(*workingint >= 0)  {
 //	  printf("Picked Material = %d!\r\n", *workingint);
@@ -1539,44 +1708,43 @@ void Player::DoSpecial(UserAction &curact)  {
       }break;
     case(DOING_PICKSPELL):  {
       int key = -1;
-      if(curact.Type() == USERACTION_KEYPRESSED) key = curact.Key();
-      else if(curact.Type() == USERACTION_BUTTONPRESSED)  {
+      if(curact->g.type == INPUTACTION_KEYDOWN) key = curact->k.key;
+      else if(curact->g.type == INPUTACTION_CONTROLDOWN)  {
 	int ctr;
 	for(ctr=0; ctr<256; ctr++) {
-	  if(curact.ButtonPressed() == __sb[ctr]) key = ctr;
+	  if(curact->c.control == __sb[ctr]) key = ctr;
 	  }
 	}
       if(key >= 0)  {
 	switch(key)  {
-	  case(SCAN_A): *workingint = SPELL_ARROWS;		break;
-	  case(SCAN_B): *workingint = SPELL_BLINDNESS;		break;
-	  case(SCAN_C): *workingint = SPELL_CONTROL_CREATURE;	break;
-	  case(SCAN_D): *workingint = SPELL_DISINTIGRATE;	break;
-	  case(SCAN_E): *workingint = SPELL_NONE;		break;
-	  case(SCAN_F): *workingint = SPELL_FIREBALL;		break;
-	  case(SCAN_G): *workingint = SPELL_GLOBE_OF_SEEING;	break;
-	  case(SCAN_H): *workingint = SPELL_NONE;		break;
-	  case(SCAN_I): *workingint = SPELL_INVISIBILITY;	break;
-	  case(SCAN_J): *workingint = SPELL_JUMP;		break;
-	  case(SCAN_K): *workingint = SPELL_NONE;		break;
-	  case(SCAN_L): *workingint = SPELL_LIGHTNING_BOLT;	break;
-	  case(SCAN_M): *workingint = SPELL_MANNA_DRAIN;	break;
-	  case(SCAN_N): *workingint = SPELL_NEGATE_MAGIC;	break;
-	  case(SCAN_O): *workingint = SPELL_OPEN_PORTAL;	break;
-	  case(SCAN_P): *workingint = SPELL_PROTECTION;		break;
-	  case(SCAN_Q): *workingint = SPELL_QUICKNESS;		break;
-	  case(SCAN_R): *workingint = SPELL_REOPEN_PORTAL;	break;
-	  case(SCAN_S): *workingint = SPELL_SINKHOLE;		break;
-	  case(SCAN_T): *workingint = SPELL_TELEPORT;		break;
-	  case(SCAN_U): *workingint = SPELL_UNDO_DAMAGE;	break;
-	  case(SCAN_V): *workingint = SPELL_VISION;		break;
-	  case(SCAN_W): *workingint = SPELL_WALL_OF_STONE;	break;
-	  case(SCAN_X): *workingint = SPELL_EXTINGUISH;		break;
-	  case(SCAN_Y): *workingint = SPELL_NONE;		break;
+	  case(KEY_A): *workingint = SPELL_ARROWS;		break;
+	  case(KEY_B): *workingint = SPELL_BLINDNESS;		break;
+	  case(KEY_C): *workingint = SPELL_CONTROL_CREATURE;	break;
+	  case(KEY_D): *workingint = SPELL_DISINTIGRATE;	break;
+	  case(KEY_E): *workingint = SPELL_NONE;		break;
+	  case(KEY_F): *workingint = SPELL_FIREBALL;		break;
+	  case(KEY_G): *workingint = SPELL_GLOBE_OF_SEEING;	break;
+	  case(KEY_H): *workingint = SPELL_NONE;		break;
+	  case(KEY_I): *workingint = SPELL_INVISIBILITY;	break;
+	  case(KEY_J): *workingint = SPELL_JUMP;		break;
+	  case(KEY_K): *workingint = SPELL_NONE;		break;
+	  case(KEY_L): *workingint = SPELL_LIGHTNING_BOLT;	break;
+	  case(KEY_M): *workingint = SPELL_MANNA_DRAIN;	break;
+	  case(KEY_N): *workingint = SPELL_NEGATE_MAGIC;	break;
+	  case(KEY_O): *workingint = SPELL_OPEN_PORTAL;	break;
+	  case(KEY_P): *workingint = SPELL_PROTECTION;		break;
+	  case(KEY_Q): *workingint = SPELL_QUICKNESS;		break;
+	  case(KEY_R): *workingint = SPELL_REOPEN_PORTAL;	break;
+	  case(KEY_S): *workingint = SPELL_SINKHOLE;		break;
+	  case(KEY_T): *workingint = SPELL_TELEPORT;		break;
+	  case(KEY_U): *workingint = SPELL_UNDO_DAMAGE;	break;
+	  case(KEY_V): *workingint = SPELL_VISION;		break;
+	  case(KEY_W): *workingint = SPELL_WALL_OF_STONE;	break;
+	  case(KEY_X): *workingint = SPELL_EXTINGUISH;		break;
+	  case(KEY_Y): *workingint = SPELL_NONE;		break;
 	  }
-	if(key != SCAN_ESC)  {
-	  UserAction tmpa;
-	  curact = tmpa;
+	if(key != KEY_ESC)  {
+	  curact->g.type = INPUTACTION_NONE;
 	  }
 	if(*workingint >= 0)  {
 //	  printf("Picked Spell!\r\n");
@@ -1587,47 +1755,45 @@ void Player::DoSpecial(UserAction &curact)  {
 	}
       }break;
     case(DOING_SELECTTHING):  {
-      if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
-	int x = curact.Startx(), y = curact.Starty();
+      if(curact->g.type == INPUTACTION_MOUSEDOWN
+	&& (curact->m.panel == mainp || curact->m.panel == minip))  {
+	int x = curact->m.x, y = curact->m.y;
 	Cell *tmpc;
-	if(curact.Pan() == mainp)  curmap->Screen2Cell(x, y);
+	if(curact->m.panel == mainp)  curmap->Screen2Cell(x, y);
 	else  curmap->Mini2Cell(x, y);
 	tmpc = curmap->CellAt(x, y);
 	if(tmpc == NULL) *workingint = 0;
 	else *workingint = tmpc->Number();
 	workingint = NULL;
 	doing = DOING_NORMAL;
-	UserAction tmpa;
-	curact = tmpa;
+	curact->g.type = INPUTACTION_NONE;
 	ResetInput();
 	}
       }break;
     case(DOING_SELECTCELL):  {
-      if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
-	int x = curact.Startx(), y = curact.Starty();
+      if(curact->g.type == INPUTACTION_MOUSEDOWN
+	&& (curact->m.panel == mainp || curact->m.panel == minip))  {
+	int x = curact->m.x, y = curact->m.y;
 	Cell *tmpc;
-	if(curact.Pan() == mainp)  curmap->Screen2Cell(x, y);
+	if(curact->m.panel == mainp)  curmap->Screen2Cell(x, y);
 	else  curmap->Mini2Cell(x, y);
 	tmpc = curmap->CellAt(x, y);
 	if(tmpc == NULL) *workingint = 0;
 	else *workingint = tmpc->Number();
 	workingint = NULL;
 	doing = DOING_NORMAL;
-	UserAction tmpa;
-	curact = tmpa;
+	curact->g.type = INPUTACTION_NONE;
 	ResetInput();
 	}
       }break;
     case(DOING_SELECTCELLS):  {
-      if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
-	int x1 = curact.Startx(), y1 = curact.Starty();
-	int x2 = curact.Endx(), y2 = curact.Endy();
+      if(curact->g.type == INPUTACTION_MOUSEDOWN
+	&& (curact->m.panel == mainp || curact->m.panel == minip))  {
+	int x1 = curact->m.x, y1 = curact->m.y;
+	int x2 = x1+curact->m.xs, y2 = y1+curact->m.ys;
 	if(x1>x2)  { int tmp = x1; x1=x2; x2=tmp; }
 	if(y1>y2)  { int tmp = y1; y1=y2; y2=tmp; }
-	if(curact.Pan() == mainp)  {
+	if(curact->m.panel == mainp)  {
 	  curmap->Screen2Cell(x1, y1);
 	  curmap->Screen2Cell(x2, y2);
 	  }
@@ -1647,19 +1813,18 @@ void Player::DoSpecial(UserAction &curact)  {
 	  }
 	workinglist = NULL;
 	doing = DOING_NORMAL;
-	UserAction tmpa;
-	curact = tmpa;
+	curact->g.type = INPUTACTION_NONE;
 	ResetInput();
 	}
       }break;
     case(DOING_SELECTLCELLS):  {
-      if(curact.Type() == USERACTION_MOUSE
-	&& (curact.Pan() == mainp || curact.Pan() == minip))  {
-	int x1 = curact.Startx(), y1 = curact.Starty();
-	int x2 = curact.Endx(), y2 = curact.Endy();
+      if(curact->g.type == INPUTACTION_MOUSEDOWN
+	&& (curact->m.panel == mainp || curact->m.panel == minip))  {
+	int x1 = curact->m.x, y1 = curact->m.y;
+	int x2 = x1+curact->m.xs, y2 = y1+curact->m.ys;
 //	if(x1>x2)  { int tmp = x1; x1=x2; x2=tmp; }
 //	if(y1>y2)  { int tmp = y1; y1=y2; y2=tmp; }
-	if(curact.Pan() == mainp)  {
+	if(curact->m.panel == mainp)  {
 	  curmap->Screen2Cell(x1, y1);
 	  curmap->Screen2Cell(x2, y2);
 	  }
@@ -1677,24 +1842,22 @@ void Player::DoSpecial(UserAction &curact)  {
 	  }
 	workinglist = NULL;
 	doing = DOING_NORMAL;
-	UserAction tmpa;
-	curact = tmpa;
+	curact->g.type = INPUTACTION_NONE;
 	ResetInput();
 	}
       }break;
     case(DOING_SELECTCREATURE):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
-	for(ctr=0; (ctr<curact.Size()) && (workingint != NULL); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; (ctr<selected.Size()) && (workingint != NULL); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && sel->Type() == THING_CREATURE)  {
 	    *workingint = sel->Number();
 	    workingint = NULL;
 	    doing = DOING_NORMAL;
-	    UserAction tmpa;
-	    curact = tmpa;
+	    curact->g.type = INPUTACTION_NONE;
 	    ResetInput();
 	    }
 	  }
@@ -1702,31 +1865,30 @@ void Player::DoSpecial(UserAction &curact)  {
       }break;
     case(DOING_SELECTCREATURES):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && sel->Type() == THING_CREATURE)
 	    *workinglist += sel->Number();
 	  }
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_SELECTFCREATURES):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, enemies;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && sel->Type() == THING_CREATURE)  {
 	    if(this->IsOwn(sel))
 	      *workinglist += sel->Number();
@@ -1741,20 +1903,19 @@ void Player::DoSpecial(UserAction &curact)  {
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_SELECTECREATURES):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, friends;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && sel->Type() == THING_CREATURE)  {
 	    if(this->IsOwn(sel))
 	      friends += sel->Number();
@@ -1769,19 +1930,18 @@ void Player::DoSpecial(UserAction &curact)  {
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_SELECTOBJS):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && (sel->Type() == THING_CREATURE
 		|| sel->Type() == THING_STRUCT))
 	    *workinglist += sel->Number();
@@ -1789,20 +1949,19 @@ void Player::DoSpecial(UserAction &curact)  {
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_SELECTFOBJS):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, enemies, objs;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && (sel->Type() == THING_CREATURE
 		|| sel->Type() == THING_STRUCT))  {
 	    if(sel->Type() == THING_STRUCT)
@@ -1821,20 +1980,19 @@ void Player::DoSpecial(UserAction &curact)  {
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     case(DOING_SELECTEOBJS):  {
       if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
-      if(curact.Type() == USERACTION_MOUSE && curact.Size() > 0)  {
+      if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, friends, objs;
 	Thing *sel;
-	for(ctr=0; ctr<curact.Size(); ctr++)  {
-	  sel = things.FindBySpriteNumber(curact[ctr]);
+	for(ctr=0; ctr<selected.Size(); ctr++)  {
+	  sel = things.FindBySpriteNumber(selected[ctr]);
 	  if(sel != NULL && (sel->Type() == THING_CREATURE
 		|| sel->Type() == THING_STRUCT))  {
 	    if(sel->Type() == THING_STRUCT)
@@ -1853,16 +2011,14 @@ void Player::DoSpecial(UserAction &curact)  {
 	if(workinglist->Size() > 0)  {
 	  workinglist = NULL;
 	  doing = DOING_NORMAL;
-	  UserAction tmpa;
-	  curact = tmpa;
+	  curact->g.type = INPUTACTION_NONE;
 	  ResetInput();
 	  }
 	}
       }break;
     }
-  if(curact.Type() == USERACTION_MOUSE && curact.ButtonPressed() == 1)  {
-    UserAction tmpa;
-    curact = tmpa;
+  if(curact->g.type == INPUTACTION_MOUSEDOWN && curact->m.button == 1)  {
+    curact->g.type = INPUTACTION_NONE;
     }
   }
 
@@ -1881,38 +2037,50 @@ void Player::RefigureSpellcasters()  {
 //    if((!magical) && (((Creature*)Selectlist[ctr])->Spells()
 //	|| ((Creature*)Selectlist[ctr])->Spells()))  magical = 1;
     }
-  Button *cb;
-  cb = screen->GetButtonByNumber(__com[SCAN_C]);
+  Clickey *cb;
+  cb = (Clickey*)screen->GetSpriteByNumber(__com[KEY_C]);
   if(selcast)  {
     if(!cb->Visible())  {
-      cb->Draw();  user->MapKeyToButton(SCAN_C, cb);  cb->Enable();
+      cb->Draw();
+      input->MapKeyToControl(KEY_C, cb);
+      cb->Enable();
       }
     }
   else  {
     if(cb->Visible())  {
-      cb->Erase();  user->UnmapButton(cb);  cb->Disable();
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     }
-  cb = screen->GetButtonByNumber(__com[SCAN_N]);
+  cb = (Clickey*)screen->GetSpriteByNumber(__com[KEY_N]);
   if(selpray)  {
     if(!cb->Visible())  {
-      cb->Draw();  user->MapKeyToButton(SCAN_N, cb);  cb->Enable();
+      cb->Draw();
+      input->MapKeyToControl(KEY_N, cb);
+      cb->Enable();
       }
     }
   else  {
     if(cb->Visible())  {
-      cb->Erase();  user->UnmapButton(cb);  cb->Disable();
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     }
-  cb = screen->GetButtonByNumber(__com[SCAN_Q]);
+  cb = (Clickey*)screen->GetSpriteByNumber(__com[KEY_Q]);
   if(selcast | selpray)  {
     if(!cb->Visible())  {
-      cb->Draw();  user->MapKeyToButton(SCAN_Q, cb);  cb->Enable();
+      cb->Draw();
+      input->MapKeyToControl(KEY_Q, cb);
+      cb->Enable();
       }
     }
   else  {
     if(cb->Visible())  {
-      cb->Erase();  user->UnmapButton(cb);  cb->Disable();
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     }
   }
@@ -1932,33 +2100,43 @@ void Player::ResetState()  {
   workingint = NULL;
   workinglist = NULL;
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
       if(!cb->Visible())  {
-	cb->Draw();	user->MapKeyToButton(ctr, cb);	cb->Enable();
+	cb->Draw();
+	input->MapKeyToControl(ctr, cb);
+	cb->Enable();
 	}
       }
     if(__sb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__sb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__sb[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__nb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__nb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__nb[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__bb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__bb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__bb[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__mb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__mb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__mb[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     }
   RefigureSpellcasters();
@@ -1966,22 +2144,26 @@ void Player::ResetState()  {
 
 void Player::PickSpell(int *v)  {
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
-//    if(__sb[ctr] != 0)  {
-//      cb = screen->GetButtonByNumber(__sb[ctr]);
-//      if(cb->IsPressed())  cb->StealthClick();	cb->Draw();
-//      user->MapKeyToButton(ctr, cb);	cb->Enable();
-//      }
+    if(__sb[ctr] != 0)  {
+      cb = (Clickey*)screen->GetSpriteByNumber(__sb[ctr]);
+      if(cb->State())  cb->SetState(0);	cb->Draw();
+      input->MapKeyToControl(ctr, cb);
+      cb->Enable();
+      }
     if(__sb[ctr] != 0 && (selcast & (1 << s2n[ctr])))  {
-      cb = screen->GetButtonByNumber(__sb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();	cb->Draw();
-      user->MapKeyToButton(ctr, cb);	cb->Enable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__sb[ctr]);
+      if(cb->State())  cb->SetState(0);	cb->Draw();
+      input->MapKeyToControl(ctr, cb);
+      cb->Enable();
       }
     }
   workingint = v, workinglist = NULL, doing = DOING_PICKSPELL;
@@ -1989,17 +2171,20 @@ void Player::PickSpell(int *v)  {
 
 void Player::PickPrayer(int *v)  { 
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__nb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__nb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();	cb->Draw();
-      user->MapKeyToButton(ctr, cb);	cb->Enable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__nb[ctr]);
+      if(cb->State())  cb->SetState(0);	cb->Draw();
+      input->MapKeyToControl(ctr, cb);
+      cb->Enable();
       }
     }
   workingint = v, workinglist = NULL, doing = DOING_PICKPRAYER;
@@ -2007,17 +2192,20 @@ void Player::PickPrayer(int *v)  {
 
 void Player::PickStructure(int *v)  {
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__bb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__bb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();	cb->Draw();
-      user->MapKeyToButton(ctr, cb);	cb->Enable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__bb[ctr]);
+      if(cb->State())  cb->SetState(0);	cb->Draw();
+      input->MapKeyToControl(ctr, cb);
+      cb->Enable();
       }
     }
   workingint = v, workinglist = NULL, doing = DOING_PICKSTRUCTURE;
@@ -2025,22 +2213,27 @@ void Player::PickStructure(int *v)  {
 
 void Player::PickMaterial(int *v)  {
   int ctr;
-  Button *cb;
+  Clickey *cb;
   for(ctr=0; ctr<256; ctr++)  {
     if(__com[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__com[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__com[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__bb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__bb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();
-      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__bb[ctr]);
+      if(cb->State())  cb->SetState(0);
+      cb->Erase();
+      input->UnmapControl(cb);
+      cb->Disable();
       }
     if(__mb[ctr] != 0)  {
-      cb = screen->GetButtonByNumber(__mb[ctr]);
-      if(cb->IsPressed())  cb->StealthClick();	cb->Draw();
-      user->MapKeyToButton(ctr, cb);	cb->Enable();
+      cb = (Clickey*)screen->GetSpriteByNumber(__mb[ctr]);
+      if(cb->State())  cb->SetState(0);	cb->Draw();
+      input->MapKeyToControl(ctr, cb);
+      cb->Enable();
       }
     }
   workingint = v, workinglist = NULL, doing = DOING_PICKMATERIAL;
@@ -2049,8 +2242,12 @@ void Player::PickMaterial(int *v)  {
 
 void Player::SelectCell(int *v)
   {
-  mouse->SetPanelBehavior(mainp, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  mouse->SetPanelBehavior(minip, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
+  mouse->SetBehavior(mainp, 1, MB_CLICK);
+  mouse->SetBehavior(mainp, 2, MB_CLICK);
+  mouse->SetBehavior(mainp, 3, MB_CLICK);
+  mouse->SetBehavior(minip, 1, MB_CLICK);
+  mouse->SetBehavior(minip, 2, MB_CLICK);
+  mouse->SetBehavior(minip, 3, MB_CLICK);
   workingint = v, workinglist = NULL, doing = DOING_SELECTCELL;
   }
 
@@ -2061,8 +2258,12 @@ void Player::SelectCells(IntList *v)
 
 void Player::SelectLCells(IntList *v)   
   {
-  mouse->SetPanelBehavior(mainp, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
-  mouse->SetPanelBehavior(minip, MOUSE_LINE, MOUSE_LINE, MOUSE_CLICK);
+  mouse->SetBehavior(mainp, 1, MB_LINE);
+  mouse->SetBehavior(mainp, 2, MB_CLICK);
+  mouse->SetBehavior(mainp, 3, MB_CLICK);
+  mouse->SetBehavior(minip, 1, MB_LINE);
+  mouse->SetBehavior(minip, 2, MB_CLICK);
+  mouse->SetBehavior(minip, 3, MB_CLICK);
   workingint = NULL, workinglist = v, doing = DOING_SELECTLCELLS;
   }
 
@@ -2112,23 +2313,21 @@ void Player::SelectEnemyObjects(IntList *v)
   }
 
 void Player::ResetInput()  {
-  mouse->SetBehavior(MOUSE_CLICK, MOUSE_IGNORE, MOUSE_CLICK);
-  mouse->SetPanelBehavior(mainp, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
-  mouse->SetPanelBehavior(minip, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
-  user->MapKeyToButton(SCAN_PAUSE, MainButtonNum);
-  }
-
-char *Player::GetCMap()  {
-  return (char*)cmap;
-  }
-
-void Player::SetCMap(char *cm)  {
-  memcpy(cmap, cm, 256);
+  mouse->SetBehavior(0, 1, MB_CLICK);
+  mouse->SetBehavior(0, 2, MB_IGNORE);
+  mouse->SetBehavior(0, 3, MB_CLICK);
+  mouse->SetBehavior(mainp, 1, MB_BOX);
+  mouse->SetBehavior(mainp, 2, MB_CLICK);
+  mouse->SetBehavior(mainp, 3, MB_BOX);
+  mouse->SetBehavior(minip, 1, MB_CLICKDRAW);
+  mouse->SetBehavior(minip, 2, MB_CLICK);
+  mouse->SetBehavior(minip, 3, MB_BOX);
+  input->MapKeyToControl(KEY_PAUSE, MainButtonNum);
   }
 
 void Player::CommandSelected(Action *tmpa)  {
   int ctr;
-  if(user->IsPressed(SCAN_LSHIFT))  {
+  if(key->IsPressed(KEY_LSHIFT))  {
     for(ctr=0; ctr<Selectsize; ctr++)  {
       ((Creature *)Selectlist[ctr])->DoWhenDone(tmpa);
       }
@@ -2138,4 +2337,16 @@ void Player::CommandSelected(Action *tmpa)  {
       ((Creature *)Selectlist[ctr])->Do(tmpa);
       }
     }
+  }
+
+void Player::SetTeamColors(int c1, int c2) {
+  Exit(0, "Dynamic Team Color change not supported\n");
+  }
+
+int Player::TeamColor1() {
+  return tcol1;
+  }
+
+int Player::TeamColor2() {
+  return tcol2;
   }

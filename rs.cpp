@@ -1,8 +1,9 @@
-#include <user/engine.h>
-#include <user/screen.h>
+#include <user.h>
 
 int main(int argc, char **argv)  {
-  Screen sc(MODE_320x200);
-  User user;
+  InitUserEngine(argc, argv);
+  Screen sc(320, 200, 8);
+  Keyboard key;
+  Exit(0);
   return 0;
   }

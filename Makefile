@@ -1,15 +1,17 @@
-CC:=	gcc -Wall -s -O2 -ffast-math
-OBJS=	$(DJDIR)/include/user/*.o
-DEPS=	$(DJDIR)/include/user/*.cpp
-DEPH=	$(DJDIR)/include/user/*.h
+CC:=	gcc $(shell U2-CFlgs)
+#CC:=	gcc -Wall -s -O2 -ffast-math
+UDIR:=	$(shell U2-Dir)
+OBJS:=	$(shell csh -c "echo $(UDIR)*.o")
+DEPS:=	$(shell csh -c "echo $(UDIR)*.cpp")
+DEPH:=	$(shell csh -c "echo $(UDIR)*.h")
 ALL=	Makefile
 LHEADS=	thing.h creature.h cell.h player.h action.h map.h stats.h weapon.h game.h spell.h ammo.h struct.h graphics/creature/cre.h
 LOBJS=	map.o game.o dg2.o creature.o thing.o cell.o spell.o ammo.o struct.o player.o
 #LOBJS=	*.o
-LIBS=	-luser
+LIBS:=	$(shell U2-Libs)
 TSTR=   $(shell date +"%Y%m%d%H%M")
 
-all:	dg2 rs
+all:	dg2 palconv
 
 tar:	dg2.cpp
 	cd .. ; tar czhvf ~/c/archive/dg2.$(TSTR).tar.gz \
@@ -21,30 +23,21 @@ tar:	dg2.cpp
 bcr:	bcr.cpp creature.h $(OBJS) $(ALL)
 	$(CC) -o bcr bcr.cpp $(LIBS)
 
-rs:	rs.cpp $(OBJS) $(ALL)
+rs:	rs.cpp $(ALL) $(DEPS) $(DEPH)
 	$(CC) -o rs rs.cpp $(LIBS)
 
-dg2:	$(LOBJS) $(ALL) $(LHEADS) $(OBJS)
-	make -C $(DJDIR)/include/user user
+dg2:	$(ALL) $(LOBJS) $(LHEADS) $(DEPS) $(DEPH)
+	make -C $(UDIR) user
 	$(CC) -o dg2 $(LOBJS) $(LIBS)
 
-$(DJDIR)/include/user/%.o:	$(DJDIR)/include/user/screen.h \
-#				$(DJDIR)/include/user/%.cpp \
-                                $(DJDIR)/include/user/makefile
-	@echo -n
-	make -C $(DJDIR)/include/user
+tg:	tg.o $(ALL) $(LHEADS)
+	$(CC) -o tg tg.o $(LIBS)
 
-%.o:	%.cpp $(ALL)
+palconv:	palconv.o $(ALL) $(LHEADS)
+	$(CC) -o palconv palconv.o $(LIBS)
+
+%.o:	%.cpp $(LHEADS) $(ALL) $(DEPH)
 	$(CC) -c $<
 
-player.o:	player.cpp $(LHEADS) $(ALL)
-game.o:		game.cpp $(LHEADS) $(ALL)
-map.o:		map.cpp $(LHEADS) $(ALL)
-thing.o:	thing.cpp $(LHEADS) $(ALL)
-dg2.o:		dg2.cpp $(LHEADS) $(ALL)
-creature.o:	creature.cpp $(LHEADS) $(ALL)
-cell.o:		cell.cpp $(LHEADS) $(ALL)
-spell.o:	spell.cpp $(LHEADS) $(ALL)
-ammo.o:		ammo.cpp $(LHEADS) $(ALL)
-struct.o:	struct.cpp $(LHEADS) $(ALL)
-
+clean:
+	rm -f *.o *.so *.a dg2 tg rs bcr

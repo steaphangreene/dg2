@@ -5,6 +5,7 @@
 
 #define gm gmode[cmode]
 
+extern Screen *screen;
 extern Panel mainp;
 extern GMode gmode[10];
 extern char cmode;
@@ -34,7 +35,7 @@ Structure::Structure(int Type, int Material)  {
   inside[0] = NULL;
   inside[1] = NULL;
   type = THING_STRUCT;
-  ClaimSprite(image.SpriteNumber());
+  ClaimSprite(image.Number());
   image.SetPanel(mainp);
   discovered = 0;
   int ctr;
@@ -47,7 +48,7 @@ Structure::~Structure()  {
   if(location[0] != NULL)  location[0]->Leave(this);
   location[0] = NULL;
   delete inside;
-  UnclaimSprite(image.SpriteNumber());
+  UnclaimSprite(image.Number());
   image.Erase();
   }
 
@@ -210,7 +211,8 @@ void Structure::InitGraphics()  {
     }
   stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0] =
 	new Graphic("graphics/structs/r_wall/00.bmp");
-  stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0]->tcolor = 0;
+  stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0]->tcolor = 33;
+  screen->MakeFriendly(stgr[STRUCT_WALL][MATERIAL_ROCK][2][0][0]);
 
   for(ctr=0; ctr<NEIGHBOR_MAX; ctr++)  {
     FILE *tmpfl;
@@ -219,16 +221,20 @@ void Structure::InitGraphics()  {
     if(tmpfl != NULL)  {
       fclose(tmpfl);
       stgr[STRUCT_WALL][MATERIAL_WOOD][2][0][ctr] = new Graphic(buf);
+      screen->MakeFriendly(stgr[STRUCT_WALL][MATERIAL_WOOD][2][0][ctr]);
       }
     else  stgr[STRUCT_WALL][MATERIAL_WOOD][2][0][ctr] = NULL;
     }
 
   stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0] =
 	new Graphic("graphics/structs/ramp.bmp");
-  stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0]->tcolor = 0;
+  screen->MakeFriendly(stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0]);
+  stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0]->tcolor = 33;
+  screen->MakeFriendly(stgr[STRUCT_RAMP][MATERIAL_ROCK][2][0][0]);
   stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0] =
 	new Graphic("graphics/structs/bridge.bmp");
-  stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0]->tcolor = 0;
+  stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0]->tcolor = 33;
+  screen->MakeFriendly(stgr[STRUCT_BRIDGE][MATERIAL_WOOD][2][0][0]);
  int ctrn;
  for(ctrn=0; ctrn < NEIGHBOR_MAX; ctrn++) {
   for(ctr=0; ctr<STRUCT_MAX; ctr++)  {
@@ -240,9 +246,9 @@ void Structure::InitGraphics()  {
 	  new Graphic(stgr[ctr][ctr2][2][0][ctrn]->Scaled(0.25));
 	for(ctr3=0; ctr3<3; ctr3++)  {
 	  stgr[ctr][ctr2][ctr3][1][ctrn] =
-		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->Hashed());
+		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->Hashed(0));
 	  stgr[ctr][ctr2][ctr3][2][ctrn] =
-		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->OffHashed());
+		new Graphic(stgr[ctr][ctr2][ctr3][0][ctrn]->OffHashed(0));
 	  stgr[ctr][ctr2][ctr3][0][ctrn]->FindTrueCenter();
 	  stgr[ctr][ctr2][ctr3][1][ctrn]->FindTrueCenter();
 	  stgr[ctr][ctr2][ctr3][2][ctrn]->FindTrueCenter();

@@ -68,8 +68,8 @@ int main(int argc, char **argv)  {
   user.MapKeyToButton(SCAN_RIGHT, fb);
   user.MapKeyToButton(SCAN_LEFT, bb);
   mouse.ShowCursor();
-  mouse.SetBehavior(MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  UserAction a;
+  mouse.SetBehavior(MB_CLICK, MB_CLICK, MB_CLICK);
+  InputAction a;
   Sprite s;
 //  ResFile crf("dude.crf", argv[0]);
 
@@ -85,18 +85,18 @@ int main(int argc, char **argv)  {
     screen.Refresh();
     a = user.Action();
     switch(a.Type())  {
-      case(USERACTION_BUTTONRELEASED):  {
-	if(a.ButtonPressed() == qb.SpriteNumber())  {
+      case(INPUTACTION_BUTTONRELEASED):  {
+	if(a.ButtonPressed() == qb.Number())  {
 	  quit = 1;
 	  }
-	if(a.ButtonPressed() == bb.SpriteNumber())  {
+	if(a.ButtonPressed() == bb.Number())  {
 	  indn--;
 	  if(indn<0) indn = 0;
 	  if(img[inda][indn] != NULL) s.SetImage(img[inda][indn]->Scaled(4.0));
 	  else s.SetImage(nullg.Scaled(2.0));
 	  s.Move(128+64, 480-(128+64));
 	  }
-	if(a.ButtonPressed() == fb.SpriteNumber())  {
+	if(a.ButtonPressed() == fb.Number())  {
 	  indn++;
 	  if(indn>15) indn = 15;
 	  if(img[inda][indn] != NULL) s.SetImage(img[inda][indn]->Scaled(4.0));

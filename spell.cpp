@@ -83,6 +83,7 @@ char sprng[64] = {
 
 
 Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
+  Debug("Spell::Spell() Begin");
 //  printf("Creating spell #%d\r\n", nm);
   gsize = gm.xstep;
   caster = cstr;
@@ -109,9 +110,11 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
 	}
       } break;
     case(PRAYER_HEAL):  {
+      Debug("Spell::Spell(): case(PRAYER_HEAL): Start");
       ((Creature*)list[params[0]])->hit = 100;
       ((Creature*)list[params[0]])->fatigue = 100000;
       ((Creature*)list[params[0]])->UpdateCondition();
+      Debug("Spell::Spell(): case(PRAYER_HEAL): Finish");
       } break;
     case(SPELL_VISION):  {
       images = new (Sprite *)[1];
@@ -238,10 +241,10 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       } break;
     }
   ReScaleme();
+  Debug("Spell::Spell() End");
   }
 
 Spell::~Spell()  {
-  debug_position = 333;
   Remove();
   if(caster != NULL)  {
     if(((Creature *)caster)->sustained_spell == thingnum)  {
@@ -322,7 +325,6 @@ Spell::~Spell()  {
       delete inside;
       }break;
     }
-  debug_position = 399;
   }
 
 void Spell::Select()  {
@@ -332,6 +334,7 @@ void Spell::ToggleSelect()  {
   }
 
 void Spell::updateme()  {
+  Debug("Spell::updateme() Begin");
   if(gsize != gm.xstep)  {
     gsize = gm.xstep;
     ReScaleme();
@@ -342,10 +345,8 @@ void Spell::updateme()  {
 	int x, y;
 	x = ((Creature *)location[0])->image.XPos();
 	y = ((Creature *)location[0])->image.YPos();
-	x -= gsize>>1;
-	y -= gsize>>1;
-	x += images[0]->XCenter();
-	y += images[0]->YCenter();
+	x -= gm.xstep>>1;
+	y -= gm.ystep>>1;
 	images[0]->Move(x, y);
 	}
       } break;
@@ -421,6 +422,7 @@ void Spell::updateme()  {
 	}
       } break;
     }
+  Debug("Spell::updateme() End");
   }
 
 void Spell::tickme()  {
@@ -590,6 +592,5 @@ void Spell::ReScaleme()  {
   }
 
 void Spell::ReAlignme(int x, int y)  {
-  x=y; //UNUSED!!!
   Changed[thingnum] = 1;
   }

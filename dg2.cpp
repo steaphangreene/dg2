@@ -13,22 +13,22 @@
 #include "dg2.h"
 
 Screen *screen = NULL;
-User *user = NULL;
+InputQueue *input = NULL;
+Keyboard *key = NULL;
 Network net;
 char multi;
 
 GMode gmode[10];
-char cmode = 2;
+char cmode = 4;
 
-DigSample *Death;
-DigSample *Punch;
-DigSample *Klang1;
-DigSample *Klang2;
-DigSample *Klang3;
-DigSample *BowFire;
-DigSample *BowHit;
-DigSample *AxeThrow;
-DigSample *ButtonClick;
+Sound *Death;
+Sound *Punch;
+Sound *Klang1;
+Sound *Klang2;
+Sound *Klang3;
+Sound *BowFire;
+Sound *BowHit;
+Sound *ButtonClick;
 
 int GetNetPlayers();
 int JoinNetGame();
@@ -39,23 +39,17 @@ Mouse *mouse = NULL;
 char **ARGV;
 int ARGC;
 
-int Main(int argc, char **argv)  {
-  debug_position=10;
-  ARGV = argv;
-  ARGC = argc;
-//  SoundCard SB(22050);
-//  Death = new DigSample("sounds/die.wav");
-//  Punch = new DigSample("sounds/punch.wav");
-//  Klang1 = new DigSample("sounds/klang1.wav");
-//  Klang2 = new DigSample("sounds/klang2.wav");
-//  Klang3 = new DigSample("sounds/klang3.wav");
-//  BowFire = new DigSample("sounds/bowfire.wav");
-//  BowHit = new DigSample("sounds/bowhit.wav");
-//  AxeThrow = new DigSample("sounds/axethrow.wav");
-//  ButtonClick = new DigSample("sounds/bowHit.wav");
-
-  Graphic NormalMouseG("graphics/pointers/normal.bmp");
-  NormalMouseG.SetCenter(1, 1);
+int main(int argc, char **argv)  {
+  InitUserEngine(argc, argv);
+//  Speaker spk(1, 16, 22050);
+//  Death = new Sound("sounds/die.wav");
+//  Punch = new Sound("sounds/punch.wav");
+//  Klang1 = new Sound("sounds/klang1.wav");
+//  Klang2 = new Sound("sounds/klang2.wav");
+//  Klang3 = new Sound("sounds/klang3.wav");
+//  BowFire = new Sound("sounds/bow fire.wav");
+//  BowHit = new Sound("sounds/bow hit.wav");
+//  ButtonClick = new Sound("sounds/bow hit.wav");
 
   gmode[0].x = 320;
   gmode[0].y = 200;
@@ -182,6 +176,31 @@ int Main(int argc, char **argv)  {
   gmode[4].mxe = 512;
   gmode[4].mye = 400;
 
+  gmode[5].x = 1600;
+  gmode[5].y = 1200;
+  gmode[5].xedge = 1600;
+  gmode[5].yedge = 1176;
+  gmode[5].xorig = 256;
+  gmode[5].yorig = 24;
+  gmode[5].xsize = 1344;
+  gmode[5].ysize = 1152;
+  gmode[5].xstep = 64;
+  gmode[5].ystep = 60;
+  gmode[5].xstart = 0;
+  gmode[5].ystart = 0;
+  gmode[5].mxedge = 120;
+  gmode[5].myedge = 156;
+  gmode[5].mxorig = 8;
+  gmode[5].myorig = 44;
+  gmode[5].mxsize = 112;
+  gmode[5].mysize = 112;
+  gmode[5].bx = 14;
+  gmode[5].by = 14;
+  gmode[5].mxb = 256;
+  gmode[5].myb = 80;
+  gmode[5].mxe = 512;
+  gmode[5].mye = 400;
+
   screen = new Screen;
   if(argc > 1)  {
     if(argv[1][0] == '3')  cmode = 0;
@@ -189,6 +208,7 @@ int Main(int argc, char **argv)  {
     else if(argv[1][0] == '8')  cmode = 2;
     else if(argv[1][1] == '0')  cmode = 3;
     else if(argv[1][1] == '2')  cmode = 4;
+    else if(argv[1][1] == '6')  cmode = 5;
     }
   else  {
     if(screen->DefaultXSize() == 320)  cmode = 0;
@@ -196,34 +216,43 @@ int Main(int argc, char **argv)  {
     else if(screen->DefaultXSize() == 800)  cmode = 2;
     else if(screen->DefaultXSize() == 1024)  cmode = 3;
     else if(screen->DefaultXSize() == 1280)  cmode = 4;
+    else if(screen->DefaultXSize() == 1600)  cmode = 5;
     }
 //  while(!screen->ModeSupported(gmode[cmode].cmode))  cmode--;
 //  screen ->SetMode(gmode[cmode].cmode);
+  screen->SetApparentDepth(8);
   screen->SetSize(gmode[cmode].x, gmode[cmode].y);
   screen->SetFont("basic10.sgf");
-  user = new User;
+  input = new InputQueue;
+  key = new Keyboard;
   mouse = new Mouse;
-  mouse->SetCursor(NormalMouseG);
-  mouse->ShowCursor();
 
-  debug_position=30;
+  Debug("main()  After ShowCursor");
 
   char quit = 0, play = 0, pnum = 0, nump = 1;
   while(!quit)  {
 // ******
     screen->FullScreenBMP("graphics/1024/start.bmp");
-    screen->GetPalette("graphics/1024/start.bmp");
+    screen->SetPalette("graphics/1024/start.bmp");
 
-    mouse->SetBehavior(MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-    UserAction curact;
-    Graphic QB0("graphics/640/buttons/quit0.bmp"); 
-    Graphic QB1("graphics/640/buttons/quit1.bmp");
-    Graphic SB0("graphics/640/buttons/start0.bmp"); 
-    Graphic SB1("graphics/640/buttons/start1.bmp");
-    Graphic CB0("graphics/640/buttons/create0.bmp"); 
-    Graphic CB1("graphics/640/buttons/create1.bmp");
-    Graphic JB0("graphics/640/buttons/join0.bmp"); 
-    Graphic JB1("graphics/640/buttons/join1.bmp");
+    Graphic NormalMouseG("graphics/pointers/normal.bmp", screen->GetPalette());
+    NormalMouseG.tcolor = NormalMouseG.image[4].uc[0];
+    mouse->SetCursor(NormalMouseG);
+    mouse->ShowCursor();
+    mouse->SetSelColor(screen->GetPalette().GetClosestColor(255,255,0));
+    mouse->SetBehavior(0, 1, MB_CLICK);
+    mouse->SetBehavior(0, 2, MB_CLICK);
+    mouse->SetBehavior(0, 3, MB_CLICK);
+
+    InputAction *curact;
+    Graphic QB0("graphics/640/buttons/quit0.bmp", screen->GetPalette()); 
+    Graphic QB1("graphics/640/buttons/quit1.bmp", screen->GetPalette());
+    Graphic SB0("graphics/640/buttons/start0.bmp", screen->GetPalette()); 
+    Graphic SB1("graphics/640/buttons/start1.bmp", screen->GetPalette());
+    Graphic CB0("graphics/640/buttons/create0.bmp", screen->GetPalette()); 
+    Graphic CB1("graphics/640/buttons/create1.bmp", screen->GetPalette());
+    Graphic JB0("graphics/640/buttons/join0.bmp", screen->GetPalette()); 
+    Graphic JB1("graphics/640/buttons/join1.bmp", screen->GetPalette());
     QB0.FindTrueCenter();
     QB1.FindTrueCenter();
     SB0.FindTrueCenter();
@@ -232,55 +261,52 @@ int Main(int argc, char **argv)  {
     CB1.FindTrueCenter();
     JB0.FindTrueCenter();
     JB1.FindTrueCenter();
-    QB0.tcolor = 0;
-    QB1.tcolor = 0;
-    SB0.tcolor = 0;
-    SB1.tcolor = 0;
-    CB0.tcolor = 0;
-    CB1.tcolor = 0;
-    JB0.tcolor = 0;
-    JB1.tcolor = 0;
-    debug_position=60;
+    QB0.tcolor = 33;
+    QB1.tcolor = 33;
+    SB0.tcolor = 33;
+    SB1.tcolor = 33;
+    CB0.tcolor = 33;
+    CB1.tcolor = 33;
+    JB0.tcolor = 33;
+    JB1.tcolor = 33;
+    Debug("main()  Before Clickeys");
     {
-      Button QB;
-      Button SB;
-      Button CB;
-      Button JB;
-      debug_position=65;
+      Clickey QB;
+      Clickey SB;
+      Clickey CB;
+      Clickey JB;
+      Debug("main()  After Clickey Init");
       QB.SetImage(&QB0, &QB1);
       SB.SetImage(&SB0, &SB1);
 //      CB.SetImage(&CB0, &CB1);
 //      JB.SetImage(&JB0, &JB1);
-      debug_position=66;
       QB.Move((gmode[cmode].x/2), (gmode[cmode].y*4)/6);
       SB.Move((gmode[cmode].x/2), (gmode[cmode].y*5)/12);
 //      CB.Move((gmode[cmode].x/2), (gmode[cmode].y*6)/12);
 //      JB.Move((gmode[cmode].x/2), (gmode[cmode].y*7)/12);
-      debug_position=67;
-      user->MapKeyToButton(SCAN_Q, &QB);
-      user->MapKeyToButton(SCAN_P, &SB);
-      user->MapKeyToButton(SCAN_S, &SB);
-//      user->MapKeyToButton(SCAN_C, &CB);
-//      user->MapKeyToButton(SCAN_M, &JB);
-//      user->MapKeyToButton(SCAN_J, &JB);
-      debug_position=68;
+      input->MapKeyToControl(KEY_Q, &QB);
+      input->MapKeyToControl(KEY_P, &SB);
+      input->MapKeyToControl(KEY_S, &SB);
+//      input->MapKeyToControl(KEY_C, &CB);
+//      input->MapKeyToControl(KEY_M, &JB);
+//      input->MapKeyToControl(KEY_J, &JB);
+      Debug("main()  After Clickey Create");
       screen->Refresh();
-      debug_position=69;
       screen->RefreshFull();
       screen->FadeIn(4);
-      debug_position=70;
+      Debug("main()  Before main loop");
       while((!play) && (!quit))  {
 	pnum = 0;
-	curact = user->Action();
-	if(curact.Type() == USERACTION_SYSTEM_QUIT)  quit = 1;
-	if(curact.Type() == USERACTION_BUTTONRELEASED)  {
-	  if(curact.ButtonPressed() == QB.SpriteNumber())  {
+	curact = input->WaitForNextAction();
+	if(curact->g.type == INPUTACTION_SYSTEM_QUIT)  quit = 1;
+	if(curact->g.type == INPUTACTION_CONTROLUP)  {
+	  if(curact->c.control == QB.Number())  {
 	    quit = 1;
 	    }
-	  if(curact.ButtonPressed() == SB.SpriteNumber())  {
+	  if(curact->c.control == SB.Number())  {
 	    play = 1; nump = 1; multi = 0;
 	    }
-	  if(curact.ButtonPressed() == CB.SpriteNumber())  {
+	  if(curact->c.control == CB.Number())  {
 	    play = 1; multi = 1;
 //	    screen->FadeOut();
 //	    QB.Erase();  SB.Erase();  CB.Erase();  JB.Erase();
@@ -291,7 +317,7 @@ int Main(int argc, char **argv)  {
 //	    screen->FadeIn();
 	    if(nump==1)  multi=0;
 	    }
-	  if(curact.ButtonPressed() == JB.SpriteNumber())  {
+	  if(curact->c.control == JB.Number())  {
 	    play = 1; multi = 1;
 	    pnum = JoinNetGame();
 	    if(pnum)  nump = StartNetGame();
@@ -302,35 +328,37 @@ int Main(int argc, char **argv)  {
 	}
       }
     screen->FadeOut(4);
-    screen->ClearScreen();
+    screen->Clear();
 // **********
-    screen->GetPalette("graphics/dg2.pal");
+    screen->SetPalette("graphics/dg2.pal");
     screen->SetPaletteEntry(0, 0, 0, 0);
-    debug_position=80;
+    //debug_position=80;
     if(play)  {
       if(multi)  net.IPX_ChangeSocket(7810);
-      Game *thisgame = new Game("maps/map1.dg2", nump, 1);
+      Game *thisgame = new Game("maps/map1.dg2", nump, 0);
       thisgame->Play(pnum);
-      debug_position=1301;
+      //debug_position=1301;
       delete thisgame;
-      debug_position=1302;
+      //debug_position=1302;
       mouse->SetCursor(NormalMouseG);
-      debug_position=1303;
+      //debug_position=1303;
       screen->RefreshFull();
-      debug_position=1304;
+      //debug_position=1304;
       if(multi)  net.IPX_ChangeSocket(7446);
-      debug_position=1305;
+      //debug_position=1305;
       }
     play = 0;
     }
-  debug_position=90;
+  //debug_position=90;
   delete screen;
-  delete user;
+  delete key;
+  delete input;
+  Exit(0);
   return 0;
   }
 
 int GetNetPlayers()  {
-  user->KeyCurrent();
+//  input->KeyCurrent();
   int other;
   int ctr=1, done=0;
   net.SetIPX(IPX_TAG, 7446);
@@ -338,7 +366,7 @@ int GetNetPlayers()  {
   while(!done)  {
     char *recv = NULL;
     char buf[20];
-    while(recv == NULL && !user->IsPressed(SCAN_SPACE))  {
+    while(recv == NULL && !key->IsPressed(KEY_SPACE))  {
       if(net.PacketReceived())  {
 	recv = (char *)net.Receive();
 	while(recv == NULL)  recv = (char *)net.Receive();
@@ -362,7 +390,7 @@ int GetNetPlayers()  {
       }
     else  done = 1;
     }
-  user->KeyQueue();
+//  input->KeyQueue();
   { char *buf;
     buf = new char[10];
     strcpy(buf, "STARTNET");
@@ -395,8 +423,8 @@ int JoinNetGame()  {
   char *recv = NULL;
   net.SetIPX(IPX_TAG, 7446);
   net.SetTCPIP("127.0.0.1", 7446);
-  net.Send("JOIN", 5);
-  while(recv == NULL && !user->IsPressed(SCAN_SPACE))  {
+  net.Send((void*)"JOIN", 5);
+  while(recv == NULL && !key->IsPressed(KEY_SPACE))  {
     if(net.PacketReceived())  {
       recv = (char *)net.Receive();
       if(recv != NULL && strncmp(recv, "ACCEPT", 6))  {

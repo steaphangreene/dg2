@@ -8,74 +8,30 @@
 extern GMode gmode[10];
 extern char cmode;
 extern Screen *screen;
+extern Panel mainp;
 
-void Map::Draw()  {
-  Draw(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
+void Map::DrawCell(int X, int Y)  {
+  int x, y, xb, yb;
+  Cell *curc;
+  x = gm.xorig + (X-gm.xstart)*gm.xstep/2 - gm.xstep/2;
+  y = gm.yorig + (Y-gm.ystart)*gm.ystep - gm.ystep/2;
+  xb = (X%8) * gm.xstep/2;
+  yb = (Y%4) * gm.ystep;
+  curc = cells[X>>1][Y];
+  screen->DrawPartialGraphic(*(Cell::pics
+	[(curc->discovered*255) & curc->Terrain()]
+	[gmode[cmode].xstep>>5][curc->visible]
+	[(curc->ftemp > curc->fresist)+(curc->ftemp > 0)]),
+	x, y, xb, yb, gm.xstep, gm.ystep, mainp);
   }
 
 void Map::Draw(int X1, int Y1, int X2, int Y2)  {
-  unsigned char *VidMem, *MainVidMem;
-  int YM, Y, X, Yc, Xc, ytrans, trans, transmax, mode = gmode[cmode].xstep>>5;
-  Cell /* *indc, */ *curc;
-  int oldval, curval;
-  int tilexp, tileyp;
-  int vt;
-  
+  X1=Y1; //Function Obsolete?
+  X2=Y2;
+  }
 
-  for(Y=Y1; Y<Y2; Y++)  {
-    MainVidMem = screen->DoubleBuffer(X1, Y);
-    screen->TakeBlock(MainVidMem, MainVidMem+(X2-X1));
-    }
-  for(YM=Y1; YM<Y2;)  {
-    tilexp = (X1 - gm.xorig) + ((gm.xstart >> 1) * gm.xstep);
-    tilexp %= (TILE_XSIZE >> (2-mode));
-    Yc=YM;	Xc=X1;
-    Screen2Cell(Xc, Yc);
-    curc = cells[Xc][Yc];
-    vt = curc->Terrain();
-
-    oldval = (curc->visible + (vt << 1))
-	& (255*(curc->discovered));
-    ytrans = (((((YM-(gm.ystep>>1))/gm.ystep)+1)*gm.ystep)+(gm.ystep>>1))<?Y2;
-    for(X=X1; X<X2; X+=trans)  {
-      transmax = (X2-X) <? ((TILE_XSIZE >> (2-mode)) - tilexp);
-      curval = oldval;
-      trans = (gm.xstep>>1);
-      if(((X-gm.xorig)/(gm.xstep>>1)) & 1 != ((YM-gm.yorig)/gm.ystep) & 1)
-	trans += (gm.xstep>>1);
-      if(trans > transmax)  trans = transmax;
-//      trans = 0;
-//      while(curval == oldval && trans < transmax)  {
-//	trans += (gm.xstep>>1);
-//	Yc=YM;	Xc=X+trans;
-//	Screen2Cell(Xc, Yc);
-//	indc = cells[Xc][Yc];
-//	curval = (indc->visible + (vt << 1))
-//		& (255*(indc->discovered));
-//	curval = -20;
-//	}
-      tileyp = (YM - gm.yorig) + (gm.ystart * gm.ystep);
-      tileyp %= (TILE_YSIZE >> (2-mode));
-      for(Y=YM;Y<ytrans; Y++)  {
-	Yc=Y;	Xc=X;
-	Screen2Cell(Xc, Yc);
-	curc = cells[Xc][Yc];
-	VidMem = screen->DoubleBuffer(X, Y);
-	memcpy(VidMem, &(Cell::pics[(curc->discovered*255) & vt][mode]
-		[curc->visible][(curc->ftemp > curc->fresist)+(curc->ftemp > 0)]
-			->image[tileyp][tilexp]),  trans);
-	tileyp++;
-	tileyp %= (TILE_YSIZE >> (2-mode));
-	}
-      tilexp+= trans;
-      tilexp %= (TILE_XSIZE >> (2-mode));
-      }
-    YM = Y;
-    }
-  for(Y=Y1; Y<Y2; Y++)  {
-    MainVidMem = screen->DoubleBuffer(X1, Y);
-    screen->GiveBlock(MainVidMem, MainVidMem+(X2-X1));
-    }
+void Map::Draw()  {
+  Draw(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
   }
 
 void Map::ReScale()  {

@@ -127,7 +127,6 @@ void Ammo::ReScaleme()  {
   }
 
 void Ammo::ReAlignme(int x, int y)  {
-  x=y; //UNUSED!!!
   }
 
 void Ammo::InitGraphics()  {

@@ -47,8 +47,9 @@ void Thing::ClearTalk()  {
   }
 
 int Thing::Interp(char *buf)  {
-  int ret = 0, ind, size, tmpn, tmpg, tmps, tmpv, ctr;
+  int ret=0;
 /*
+  int ind, size, tmpn, tmpg, tmps, tmpv, ctr;
   memcpy(&size, buf, 4);
 
 //  printf("Interpreting one, size = %d\r\n", size);
@@ -113,6 +114,10 @@ void Thing::UnclaimSprite(int spnum)  {
   }
 
 Thing *Thing::FindBySpriteNumber(int spnum)  {
+  if(!splist[spnum]) {
+    Exit(1, "Attempt to find thing associated with unassociated sprite %d\n",
+	spnum);
+    }
   return splist[spnum];
   }
 
@@ -145,43 +150,33 @@ Thing::~Thing()  {
   }
 
 void Thing::DeleteAll()  {
-  debug_position=101;
+  //debug_position=101;
   int ctr;
   for(ctr=listsize-1; ctr>=0; ctr--)  {
-    debug_position=110;
+    //debug_position=110;
     if(list[ctr] != NULL)  {
-      debug_position=111;
+      //debug_position=111;
       delete list[ctr];
-      debug_position=114;
+      //debug_position=114;
       list[ctr] = NULL;
-      debug_position=118;
+      //debug_position=118;
       }
-    debug_position=120;
+    //debug_position=120;
     Changed[ctr] = 0;
     Waiting[ctr] = 0;
     }
-  debug_position=130;
+  //debug_position=130;
   listsize=0;
   listnext=0;
-  debug_position=199;
+  //debug_position=199;
   }
 
 void Thing::Remove()  {
-//  int ctr;
-//  for(ctr=0; ctr<listsize; ctr++)  {
-//    if(list[ctr] == this)  {
-//      list[ctr] = NULL;
-//      Changed[ctr] = 0;
-//      Waiting[ctr] = 0;
-//      break;
-//      }
-//    }
   if(list[thingnum] == this)  {
     list[thingnum] = NULL;
     Changed[thingnum] = 0;
     Waiting[thingnum] = 0;
     }
-//  else  fprintf(stderr, "Not Removed = %d\n", thingnum);
   }
 
 void Thing::update()  {
@@ -261,7 +256,6 @@ void Thing::ReScaleme()  {
   }
 
 void Thing::ReAlignme(int x, int y)  {
-  if(x==y); //UNUSED!!!
   }
 
 void Thing::Select()  {
@@ -335,13 +329,13 @@ void Thing::ForceEnter(Thing *in)  {
   }
 
 int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
-//  debug_position = 5500;
+//  //debug_position = 5500;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
     Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
-//  debug_position = 5510;
+//  //debug_position = 5510;
   if(in->location[0] == NULL)  {
     if(inside[0] == NULL)  {
       inside[0] = in;
@@ -354,12 +348,12 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
       return inside[0]->Enter(in, alt, ht, up, down);
       }
     }
-//  debug_position = 5520;
+//  //debug_position = 5520;
   if(Height() > alt+up)  {
     in->altitude++;	//    printf("Climb Up!\r\n");
     return (1==2);
     }
-//  debug_position = 5530;
+//  //debug_position = 5530;
   if((inside[0] != NULL && inside[1] != NULL)
 	&& (inside[0] != in && inside[1] != in))  {
     if(inside[0] != inside[1]) return (1==2);
@@ -382,18 +376,18 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
       }
     else return (inside[0]->Enter(in, alt, ht, up, down));
     }
-//  debug_position = 5560;
+//  //debug_position = 5560;
   if(Height() < alt-down)  {
-//    debug_position = 5561;
+//    //debug_position = 5561;
     if(in->altitude > (Location(0)->Location(0)->WaterLevel() - in->height)) {
-//      debug_position = 5562;
+//      //debug_position = 5562;
       in->altitude--;	//      printf("Climb Down!\r\n");
-//      debug_position = 5563;
+//      //debug_position = 5563;
       return (1==2);
       }
-//    debug_position = 5564;
+//    //debug_position = 5564;
     }
-//  debug_position = 5570;
+//  //debug_position = 5570;
   inside[0] = in;
   inside[1] = in;
   Cell *tmpc[2];
@@ -404,7 +398,7 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
   in->Fall();
   in->location[0] = tmpc[0];
   in->location[1] = tmpc[1];
-//  debug_position = 5580;
+//  //debug_position = 5580;
 
 //  in->altitude = Height();	//  printf("Done Entering!\r\n");
 //  if(Location(0)->Location(0)->WaterDepth() >= in->height)
@@ -414,18 +408,18 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
     tmpc->Damage(5);
     }
 //  printf("Entered at height %d.\r\n", in->altitude);
-//  debug_position = 5590;
+//  //debug_position = 5590;
   return (1==1);
   }
 
 int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
-//  debug_position = 5600;
+//  //debug_position = 5600;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
 //    Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
-//  debug_position = 5610;
+//  //debug_position = 5610;
   if(in->location[0] == NULL)  {
     if(inside[0] == NULL)  {
       return (1==1);
@@ -435,12 +429,12 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
       return inside[0]->CanEnter(in, alt, ht, up, down);
       }
     }
-//  debug_position = 5620;
+//  //debug_position = 5620;
   if(Height() > alt+up)  {
     in->altitude++;	//    printf("Climb Up!\r\n");
     return (1==2);
     }
-//  debug_position = 5630;
+//  //debug_position = 5630;
   if((inside[0] != NULL && inside[1] != NULL)
 	&& (inside[0] != in && inside[1] != in))  {
     if(inside[0] != inside[1]) return (1==2);
@@ -458,14 +452,14 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
       }
     else return (inside[0]->CanEnter(in, alt, ht, up, down));
     }
-//  debug_position = 5660;
+//  //debug_position = 5660;
   if(Height() < alt-down)  {
     if(in->altitude > (Location(0)->Location(0)->WaterLevel() - in->height)) {
       in->altitude--;	//      printf("Climb Down!\r\n");
       return (1==2);
       }
     }
-//  debug_position = 5690;
+//  //debug_position = 5690;
   return (1==1);
   }
 

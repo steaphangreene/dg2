@@ -1,5 +1,7 @@
-#include "dg2.h"
 #include <string.h>
+#include <user.h>
+
+#include "dg2.h"
 #include "creature.h"
 #include "gmode.h"
 #include "map.h"
@@ -7,40 +9,51 @@
 #include "player.h"
 #include "struct.h"
 #include "ammo.h"
-#include <user/resfile.h>
+#include "game.h"
 
 #define gm gmode[cmode]
 #define EXPLORE_FOR	4
+
+//Uncomment to disable debug info for just this file
+//#undef Debug(x)
+//#define Debug(x) {}
 
 extern long long ticker;
 extern char sprng[64];
 
 extern Player *p1;
 extern Screen *screen;
-extern User *user;
 extern Panel mainp;
 extern GMode gmode[10];
 extern char cmode;
 extern Map *curmap;
-extern DigSample *Punch;
-extern DigSample *Death;
+extern Sound *Punch;
+extern Sound *Death;
 extern char multi;
-
-extern int ARGC;
-extern char **ARGV;
+extern Game *curgame;
 
 Graphic *Creature::pics[3][CREATURE_MAX][FRAME_MAX];
 Graphic *Creature::selboxg[3] = {NULL, NULL, NULL};
 int Creature::GraphicsInitialized = 0;
 Statistics *Creature::cstats[CREATURE_MAX] = {NULL};
 
-DigSample *Creature::ToldYou = NULL;
+color Creature::trc1d[CREATURE_MAX];
+color Creature::trc1l[CREATURE_MAX];
+color Creature::trc2d[CREATURE_MAX];   
+color Creature::trc2l[CREATURE_MAX];
+color Creature::rrcd[CREATURE_MAX];
+color Creature::rrcl[CREATURE_MAX];
+color Creature::tcol[TCOL_MAX][2];
+color Creature::rcol[RANK_MAX][2];
+unsigned char **Creature::cremap[CREATURE_MAX][RANK_MAX];
 
-DigSample *Creature::GotYou = NULL;
+Sound *Creature::ToldYou = NULL;
+
+Sound *Creature::GotYou = NULL;
 
 Creature::~Creature()  {
   int ctr;
-  UnclaimSprite(image.SpriteNumber());
+  UnclaimSprite(image.Number());
   for(ctr=0; ctr<spell.Size(); ctr++)  {
     if(list[spell[ctr]] != NULL)  {
       delete ((Spell *)list[spell[ctr]]);
@@ -145,7 +158,10 @@ void Creature::Init()  {
   selboxg[1]->FindTrueCenter();
   selboxg[2]->Trim();
   selboxg[2]->FindTrueCenter();
-  ClaimSprite(image.SpriteNumber());
+  screen->MakeFriendly(selboxg[0]);
+  screen->MakeFriendly(selboxg[1]);
+  screen->MakeFriendly(selboxg[2]);
+  ClaimSprite(image.Number());
   Waiting[thingnum] = 1;
   int ctr;
   for(ctr=0; ctr<12; ctr++)  {
@@ -155,15 +171,40 @@ void Creature::Init()  {
   }
 
 void Creature::SetCreatureGraphic(int ctype, char *dir)  {
+  Debug("Creature::SetCreatureGraphic()  Begin");
   if(GraphicsInitialized)  return;
   GraphicsInitialized = 1;
-  int ctr2, strst = strlen(dir);
+  int ctr, ctr2, ctr3, strst = strlen(dir);
   char *buf = new char[strst+20];
   strcpy(buf, dir);
   strcpy(&buf[strst], ".crf");
-  ResFile crf(buf, ARGV[0]);
 
+  Debug("Creature::SetCreatureGraphic()  Getting Team Colors");
+  Graphic tcols("graphics/allteams.bmp");
+  for(ctr=0; ctr<TCOL_MAX; ++ctr) {
+    tcol[ctr][0] = tcols.image[ctr].uc[0];
+    tcol[ctr][1] = tcols.image[ctr].uc[1];
+    }
+
+  Debug("Creature::SetCreatureGraphic()  Getting Rank Colors");
+  Graphic rcols("graphics/ranks.bmp");
+  for(ctr=0; ctr<RANK_MAX; ++ctr) {
+    rcol[ctr][0] = rcols.image[ctr].uc[0];
+    rcol[ctr][1] = rcols.image[ctr].uc[1];
+    }
+
+  Debug("Creature::SetCreatureGraphic()  Before Resfile");
+  ResFile crf(buf);
+
+  Debug("Creature::SetCreatureGraphic()  Within Resfile");
   CharBag *ver = crf.GetCharBag();
+  Graphic *trc = crf.GetGraphic();
+  trc1d[ctype] = trc->image[0].uc[0];
+  trc1l[ctype] = trc->image[0].uc[1];
+  trc2d[ctype] = trc->image[1].uc[0];
+  trc2l[ctype] = trc->image[1].uc[1];
+  rrcd[ctype] = trc->image[2].uc[0];
+  rrcl[ctype] = trc->image[2].uc[1];
   if((*ver)[0] != VER1 || (*ver)[1] != VER2
               || (*ver)[2] != VER3 || (*ver)[3] != VER4)  {
     if((*ver)[3] == 0)  {
@@ -177,18 +218,43 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
     }
   delete ver;
 
-  for(ctr2=0; ctr2<FRAME_MAX; ctr2++)  {
-    pics[2][ctype][ctr2] = crf.GetGraphic();
-    pics[1][ctype][ctr2] = crf.GetGraphic();
-    pics[0][ctype][ctr2] = crf.GetGraphic();
+  for(ctr=0; ctr<FRAME_MAX; ctr++)  {
+    pics[2][ctype][ctr] = crf.GetGraphic();
+    pics[1][ctype][ctr] = crf.GetGraphic();
+    pics[0][ctype][ctr] = crf.GetGraphic();
     ShortBag *tmpb = crf.GetShortBag();
+    if(pics[2][ctype][ctr]) screen->MakeFriendly(pics[2][ctype][ctr]);
+    if(pics[1][ctype][ctr]) screen->MakeFriendly(pics[1][ctype][ctr]);
+    if(pics[0][ctype][ctr]) screen->MakeFriendly(pics[0][ctype][ctr]);
     delete tmpb;
     }
+
+  for(ctr=0; ctr<RANK_MAX; ++ctr) {
+    cremap[ctype][ctr] = new unsigned char*[curgame->NumPlayers()];
+    for(ctr2=0; ctr2<curgame->NumPlayers(); ++ctr2) {
+      cremap[ctype][ctr][ctr2] = new unsigned char[256];
+      for(ctr3=0; ctr3<256; ++ctr3) {
+	cremap[ctype][ctr][ctr2][ctr3] = ctr3;
+	}
+      cremap[ctype][ctr][ctr2][trc1d[ctype]] =
+		tcol[curgame->players[ctr2]->TeamColor1()][0];
+      cremap[ctype][ctr][ctr2][trc1l[ctype]] =
+		tcol[curgame->players[ctr2]->TeamColor1()][1];
+      cremap[ctype][ctr][ctr2][trc2d[ctype]] =
+		tcol[curgame->players[ctr2]->TeamColor2()][0];
+      cremap[ctype][ctr][ctr2][trc2l[ctype]] =
+		tcol[curgame->players[ctr2]->TeamColor2()][1];
+      cremap[ctype][ctr][ctr2][rrcd[ctype]] = rcol[ctr][0];
+      cremap[ctype][ctr][ctr2][rrcl[ctype]] = rcol[ctr][1];
+      }
+    }
+
+  Debug("Creature::SetCreatureGraphic()  End");
   }
 
 Creature::Creature(int ctype, Player *pown)  {
-//  if(GotYou == NULL)  GotYou = new DigSample("sounds/What.wav");
-//  if(ToldYou == NULL)  ToldYou = new DigSample("sounds/Ok.wav");
+//  if(GotYou == NULL)  GotYou = new Sound("sounds/What.wav");
+//  if(ToldYou == NULL)  ToldYou = new Sound("sounds/Ok.wav");
   inside = new (Thing*)[2];
   inside[0] = NULL;
   inside[1] = NULL;
@@ -196,7 +262,7 @@ Creature::Creature(int ctype, Player *pown)  {
   gtype = ctype;
   owner = pown;
   image.SetPanel(mainp);
-  image.SetColormap(pown->GetCMap());
+  UpdateCMap();
   selbox.SetPanel(mainp);
   selbox.DisableCollisions();
   weaps.SetPanel(mainp);
@@ -209,36 +275,25 @@ void Creature::Place(Cell *in)  {
   }
 
 void Creature::Place(Cell *in, int fac)  {
-  debug_position = 2100;
   if((!in->Claim(this, altitude, Height()))
 	|| (!in->Enter(this, altitude, Height(), 1, 2))) {
-    debug_position = 2101;
     delete screen;
-    debug_position = 2102;
     printf("Invalid Creature Placement\n");
-    debug_position = 2103;
     exit(1);
     }
-  debug_position = 2110;
   Claimed(in);
-  debug_position = 2120;
   in->UnClaim(this);
-  debug_position = 2130;
   location[0] = in;
   xpos = 0;
   ypos = 0;
   exists = 1;
   facing = fac;
-  debug_position = 2140;
   DoVision();
-  debug_position = 2150;
   Changed[thingnum] = 1;
   Waiting[thingnum] = 1;
-  debug_position = 2160;
   }
 
 void Creature::ReAlignme(int x, int y)  {
-  x=y; //UNUSED!!!
   //Changed[thingnum] = 1;
   }
 
@@ -289,8 +344,8 @@ void Creature::UpdateCondition()  {
       crawling = 1;
       limping = 1;
       SetSpeedMul(4);
-//      frame = FRAME_CRAWL;
-      frame = FRAME_STAND;
+//	Do the FRAME_DOWN, FRAME_CRAWL, FRAME_LIMP, FRAME_SPLAT stuff.
+      if(frame == FRAME_STAND || frame == FRAME_SPLAT)  frame = FRAME_DOWN;
       height = 1;
       if(inside[0] != NULL)  inside[0]->Fall();
       Changed[thingnum] = 1;
@@ -321,8 +376,8 @@ void Creature::UpdateCondition()  {
       height = stats->height;
       limping = 1;
       SetSpeedMul(2);
-//      frame = FRAME_LIMP;
-      frame = FRAME_STAND;
+//	Do the FRAME_DOWN, FRAME_CRAWL, FRAME_LIMP, FRAME_SPLAT stuff.
+      if(frame == FRAME_DOWN || frame == FRAME_SPLAT)  frame = FRAME_STAND;
       Changed[thingnum] = 1;
       if(crawling || down)  {
 	int tmp = vision;
@@ -342,7 +397,8 @@ void Creature::UpdateCondition()  {
     if(crawling || limping || down)  {
       height = stats->height;
       SetSpeedMul(1);
-      frame = FRAME_STAND;
+//	Do the FRAME_DOWN, FRAME_CRAWL, FRAME_LIMP, FRAME_SPLAT stuff.
+      if(frame == FRAME_DOWN || frame == FRAME_SPLAT)  frame = FRAME_STAND;
       Changed[thingnum] = 1;
       if(crawling || down)  {
 	int tmp = vision;
@@ -363,26 +419,31 @@ void Creature::UpdateCondition()  {
 
 void Creature::Act()  {
   if(!exists)  return;
+  Debug("Creature::Act() Begin");
   Waiting[thingnum] = 1;
   UpdateCondition();
   Think();
   if(hit==0)  { //not down
     if((ticker & 255) == (thingnum & 255)) DamageFull(1);
+    Debug("Creature::Act() Return 1");
     return;
     }
   else if(hit<0 && hit >= -125)  { //not down
     if((ticker & 15) == (thingnum & 15)) DamageFull(1);
+    Debug("Creature::Act() Return 2");
     return;
     }
   else if(hit < -125)  {
 //    printf("Dying here!\r\n");
     delete this;
 //    printf("Died here!\r\n");
+    Debug("Creature::Act() Return 3");
     return;
     }
 
 //  if((inside[0] != NULL && ((Creature *)inside[0])->altitude <= Height())
 //      || (inside[1] != NULL && ((Creature *)inside[1])->altitude <= Height()))
+//    Debug("Creature::Act() Return 4");
 //    return;
   if(exists && target != 0)  {
     { int tf = fatigue/50000;
@@ -397,6 +458,7 @@ void Creature::Act()  {
     if(((frame & 4080) == FRAME_ATT || (frame & 4080) == FRAME_ATTP)
 	&& (target == thingnum || target == 0))  {
       ResetFrame();
+      Debug("Creature::Act() Return 5");
       return;
       }
     if((frame & 4080) == FRAME_ATT || (frame & 4080) == FRAME_ATTP)  {
@@ -404,7 +466,7 @@ void Creature::Act()  {
 	cw=1;
       else if(weap[0].range>0 && InWeaponRange((Creature *)list[target], 0))
 	cw=0;
-      else { target = 0; return; }
+      else { target = 0; Debug("Creature::Act() Return 6"); return; }
       }
 //    if(frame == FRAME_WALK || frame == FRAME_LIMP) frame=FRAME_M0_1;
     if(frame == FRAME_STAND) frame=FRAME_ATTP;
@@ -557,8 +619,8 @@ void Creature::Act()  {
 	    }
 	  else  {
 	    distt--;
-//	    printf("%p refused entrance from debug_position %d!\n", 
-//		Location(0)->Next(((dirt+1)/2)*2), debug_position);
+//	    printf("%p refused entrance from //debug_position %d!\n", 
+//		Location(0)->Next(((dirt+1)/2)*2), //debug_position);
 	    }
 	  }
 	else  {
@@ -648,6 +710,7 @@ void Creature::Act()  {
 //    Location(0)->Leave(this);
 //    delete this;
 //    printf("Dies at 2!\r\n");
+//    Debug("Creature::Act() Return 7");
 //    return;
 //    }
 
@@ -693,10 +756,12 @@ void Creature::Act()  {
 	}
       }
     }
+  Debug("Creature::Act() End");
   }
 
 void Creature::EvaluateGoal()  {
   if(goal[0] == NULL)  return;
+  Debug("Creature::EvaluateGoal() Begin");
   if(hit<=10)  {
     target = 0;
     if(goal[0] != NULL && (goal[0]->Goal() == ACTION_ATTACK
@@ -707,6 +772,7 @@ void Creature::EvaluateGoal()  {
 	|| goal[0]->Goal() == ACTION_DIG
 	|| goal[0]->Goal() == ACTION_EXTINGUISH))  {
       ClearGoals();
+      Debug("Creature::EvaluateGoal() Return 1");
       return;
       }
     }
@@ -735,7 +801,7 @@ void Creature::EvaluateGoal()  {
       GoalDoneFirst();
       }
     }
-  if(goal[0] == NULL)  return;
+  if(goal[0] == NULL) { Debug("Creature::EvaluateGoal() Return 2"); return; }
   if(goal[0]->Goal() == ACTION_KILL || goal[0]->Goal() == ACTION_ATTACK)  {
     int ctr;
     for(ctr=1; ctr < goal[0]->objects.Size(); ctr++)  {
@@ -749,11 +815,14 @@ void Creature::EvaluateGoal()  {
     if(goal[0]->objects.Size() > 1)  FlipToCloserThing(goal[0]->objects);
     else if(goal[0]->objects.Size() < 1) GoalDone();
     }
+  Debug("Creature::EvaluateGoal() End");
   }
 
 void Creature::Think()  {
+  Debug("Creature::Think() Begin");
   EvaluateGoal();
-  if((target != 0) || (dirt >= 0) || (dirf >= 0) || (down))  return;
+  if((target != 0) || (dirt >= 0) || (dirf >= 0) || (down)) 
+    { Debug("Creature::Think() Return 1"); return; }
   if(hit > 10 && (goal[0] == NULL || goal[0]->Goal() == 0))  {
     int ctr;
     if(((Creature *)Location(0))->ftemp > 0)  {
@@ -795,13 +864,15 @@ void Creature::Think()  {
       Do(tmpa);
       }
     }
-  if(goal[0] == NULL || goal[0]->Goal() == 0)  return;
+  if(goal[0] == NULL || goal[0]->Goal() == 0) 
+    { Debug("Creature::Think() Return 2"); return; }
   switch(goal[0]->Goal())  {
 
     case (ACTION_CAST+SPELL_INVISIBILITY):
     case (ACTION_CAST+SPELL_VISION):
     case (ACTION_CAST+SPELL_DISINTIGRATE):
     case (ACTION_CAST+PRAYER_HEAL):  {
+      Debug("Casting To-Creature Spell: Start");
       int spname = goal[0]->Goal() - ACTION_CAST;
       int range = sprng[spname];
       if(range == 0) range = vision;
@@ -829,6 +900,7 @@ void Creature::Think()  {
       else  progress = 0;
       Changed[thingnum] = 1;
       Waiting[thingnum] = 4;
+      Debug("Casting To-Creature Spell: Finish");
       }break;
 
 //    case (ACTION_CAST+SPELL_GLOBE_OF_SEEING):
@@ -942,7 +1014,7 @@ void Creature::Think()  {
 	GoalDone();
 	}
       else Waiting[thingnum] = 1;
-//      printf("Checking, got deb_loc of %d!\n", debug_position);
+//      printf("Checking, got deb_loc of %d!\n", //debug_position);
       } break;
 
     case ACTION_DIG:  {
@@ -1105,31 +1177,31 @@ void Creature::Think()  {
 	  }
 	}
       else  {
-	if(Location(0)->Next(facing)->IsPath() && GetPath(facing))  {
+	if(Location(0)->Next(facing) && Location(0)->Next(facing)->IsPath())  {
 	  if(GetPath(facing))  {
 	    Move((Cell *)Location(0)->Next(facing));
 	    exploring = 0;
 	    }
 	  }
-	else if(Location(0)->Next(facing+1)->IsPath() && GetPath(facing+1))  {
+	else if(Location(0)->Next(facing+1) && Location(0)->Next(facing+1)->IsPath())  {
 	  if(GetPath(facing+1))  {
 	    Move((Cell *)Location(0)->Next(facing+1));
 	    exploring = 0;
 	    }
 	  }
-	else if(Location(0)->Next(facing+11)->IsPath() && GetPath(facing+11)) {
+	else if(Location(0)->Next(facing+11) && Location(0)->Next(facing+11)->IsPath()) {
 	  if(GetPath(facing+11))  {
 	    Move((Cell *)Location(0)->Next(facing+11));
 	    exploring = 0;
 	    }
 	  }
-	else if(Location(0)->Next(facing+2)->IsPath() && GetPath(facing+2))  {
+	else if(Location(0)->Next(facing+2) && Location(0)->Next(facing+2)->IsPath())  {
 	  if(GetPath(facing+2))  {
 	    Move((Cell *)Location(0)->Next(facing+2));
 	    exploring = 0;
 	    }
 	  }
-	else if(Location(0)->Next(facing+10)->IsPath() && GetPath(facing+10)) {
+	else if(Location(0)->Next(facing+10) && Location(0)->Next(facing+10)->IsPath()) {
 	  if(GetPath(facing+10))  {
 	    Move((Cell *)Location(0)->Next(facing+10));
 	    exploring = 0;
@@ -1180,6 +1252,7 @@ void Creature::Think()  {
 	  ResetFrame();
           Changed[thingnum] = 1;
 	  }
+        Debug("Creature::Think() Return 3");
 	return;
 	}
 //      if(Move(((Creature *)list[goal[0]->Object()])->Location(0)))
@@ -1268,6 +1341,7 @@ void Creature::Think()  {
 	}
       } break;
     }
+  Debug("Creature::Think() End");
   }
 
 void Creature::DoFirst(const Action *in)  {
@@ -1306,13 +1380,16 @@ void Creature::Go(int indir)  {
   }
 
 void Creature::updateme()  {
+  Debug("Creature::updateme() Begin");
   if(!(Location(0)->InView()))  {
+    Debug("Creature::updateme() Out of View");
     image.Erase();
     selbox.Erase();
     weaps.Erase();
     }
   else  {
     if(exists)  {
+      Debug("Creature::updateme() Find Location");
       int x, y;
       x = xpos+Location(0)->XPos(); 
       y = ypos+Location(0)->YPos();
@@ -1322,36 +1399,49 @@ void Creature::updateme()  {
         x /= 2;	y /= 2;
         }
       if(hit >= -125)  {
+	Debug("Creature::updateme() I am still there");
         if(hit <= -100)  { 
+	  Debug("Creature::updateme() I am dead");
 	  frame = FRAME_SPLAT;
 	  height = 0;
 	  if(inside[0] != NULL)  inside[0]->Fall();
 	  }
         else  if(hit <= 0)  {
+	  Debug("Creature::updateme() I am down");
 	  frame = FRAME_DOWN;
 	  }
+	Debug("Creature::updateme() Setup My Image");
+//	printf("Using pics[%d][%d][%d]\n", gm.xstep>>5, gtype, frame);
 	image.UseImage(pics[gm.xstep>>5][gtype][frame]);
+	Debug("Creature::updateme() Setup My SelectboxImage");
 	selbox.UseImage(selboxg[gm.xstep>>5]);
+	Debug("Creature::updateme() Setup Priorities");
 	image.SetPriority(100000-(Height()));
 	selbox.SetPriority(100001-(Height()));
 	weaps.SetPriority(100002-(Height()));
-	image.Move(x, y, ((facing<<16)/12));
+	Debug("Creature::updateme() Setup Position");
+	image.Move(x, y, -((facing<<16)/12));
+	Debug("Creature::updateme() Setup Select Box");
 	if(selected) selbox.Move(x, y);
 	else selbox.Erase();
+	Debug("Creature::updateme() Setup Weapon Image");
 	if(cw>=0 && weap[cw].image[0][gm.xstep>>5] != NULL) {
-	  weaps.SetImage(weap[cw].image[0][gm.xstep>>5]);
+	  weaps.UseImage(weap[cw].image[0][gm.xstep>>5]);
+	  //weaps.SetImage(weap[cw].image[0][gm.xstep>>5]);
 	  //weaps.UseImage(weap[cw].image[frame >= FRAME_M0_1
 		//&& frame <= FRAME_M0_7][gm.xstep>>5]);
-	  weaps.Move(x, y, ((facing<<16)/12));
+	  weaps.Move(x, y, -((facing<<16)/12));
 	  }
 	else weaps.Erase();
         }
       }
     }
+  Debug("Creature::updateme() Spells");
   int ctr;
   for(ctr=0; ctr<spell.Size(); ctr++)  {
     Changed[spell[ctr]] = 1;
     }
+  Debug("Creature::updateme() End");
   }
 
 int Creature::GetPath(char dir)  {
@@ -1363,7 +1453,7 @@ int Creature::GetPath(char dir)  {
       }
     g1 = Location(0)->Next(dir)->Claim(this, altitude, height);
 //    if(g1) printf("Got claim from %p at deb_pos %d!\n", 
-//	Location(0)->Next(dir), debug_position);
+//	Location(0)->Next(dir), //debug_position);
     g2 = 1;	g3 = 1;
     if(dir % 2)  {
       Creature *tmpc;
@@ -1748,7 +1838,6 @@ int Creature::InWeaponRange(Creature *targ, int w)  {
   }
 
 void Creature::Strike(Creature *attacker, int skill, int pdam, int bdam)  {
-  skill=skill; //UNUSED!!!
   Punch->Play();
   int dam = bdam;
   if(stats->body < 1)  dam = 500+stats->armor;
@@ -1864,6 +1953,7 @@ int Creature::CanCast(int sp)  return ret {
 void Creature::LearnSpell(int sp)  {
   if(sp < 32) spells |= (1 << sp);
   else prayers |= (1 << (sp-32));
+  UpdateCMap();
   }
 
 int Creature::AddWeapon(Weapon &w)  {
@@ -1943,18 +2033,15 @@ void Creature::ClearGoals()  {
   }
 
 void Creature::GoalAbort()  {
-  debug_position = 666;
   if(goal[0] == NULL)  return;
   int ctr;
   goal[0]->Detach(); 
   for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
   goal[11] = NULL;
   progress = 0;
-  debug_position = 556;
   }
 
 void Creature::GoalDone()  {
-  debug_position = 667;
   if(goal[0] == NULL)  return;
   int ctr;
   goal[0]->Finish();
@@ -1962,11 +2049,9 @@ void Creature::GoalDone()  {
   for(ctr=0; ctr<11; ctr++)  goal[ctr] = goal[ctr+1];
   goal[11] = NULL;
   progress = 0;
-  debug_position = 557;
   }
 
 void Creature::GoalDoneFirst()  {
-  debug_position = 668;
   if(goal[0] == NULL)  return;
   int ctr;
   goal[0]->FinishFirst();
@@ -1976,6 +2061,13 @@ void Creature::GoalDoneFirst()  {
     goal[11] = NULL;
     }
   progress = 0;
-  debug_position = 558;
   }
 
+void Creature::UpdateCMap()  {
+  if(spells && prayers) rank = RANK_TEMPLAR;
+  else if(prayers) rank = RANK_PRIEST;
+  else if(spells) rank = RANK_MAGE;
+  else rank = RANK_GRUNT;
+  image.SetColormap(cremap[gtype][rank][owner->Number()]);
+  Changed[thingnum] = 1;
+  }

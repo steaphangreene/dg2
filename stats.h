@@ -4,6 +4,16 @@
 #include "cell.h"
 #include "string.h"
 
+#define RANK_MAX	5
+
+#define RANK_GRUNT	0
+#define RANK_COMMANDER	1
+#define RANK_PRIEST	2
+#define RANK_MAGE	3
+#define RANK_TEMPLAR	4
+
+#define TCOL_MAX	10
+
 class Statistics  {
   public:
   Statistics()  {

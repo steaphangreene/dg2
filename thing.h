@@ -1,6 +1,6 @@
 #ifndef INSOMNIA_THING_H
 #define INSOMNIA_THING_H
-#include <user/screen.h>
+#include <user.h>
 #define THINGLIST_START	(1024*16)
 #define THINGLIST_STEP	1024
 

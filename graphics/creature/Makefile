@@ -1,12 +1,15 @@
 CC:=	gcc -Wall -ffast-math -s -O2
-LIBS:=	-luser
-#LIBS:=	-luser -L/usr/X11/lib -lX11 -lm -lXext -lXxf86dga -lXxf86vm
-ALL:=	$(DJDIR)/lib/libuser.a
+LIBS:=	$(shell U2-Libs)
+#LIBS:=	-lu2 -L/usr/X11/lib -lX11 -lm -lXext -lXxf86dga -lXxf86vm
+ALL:=	/usr/local/lib/libu2.a
 
 all:	cre swtm swrl chcl rc rcc
 
-cre:	cre.cpp cre.h $(ALL)
-	$(CC) -o cre cre.cpp $(LIBS)
+cre:	cre.o $(ALL)
+	$(CC) -o cre cre.o $(LIBS)
+
+cre.o:	cre.cpp cre.h
+	$(CC) -c cre.cpp
 
 swtm:	swtm.cpp
 	$(CC) -o swtm swtm.cpp $(LIBS)

@@ -38,7 +38,7 @@ class Creature : public Thing {
   void Strike(Creature *, int, int, int);
   int IsSelected() { return selected; };
   int IsInWater();
-  static DigSample *GotYou, *ToldYou;
+  static Sound *GotYou, *ToldYou;
 //  Cell *Location(int v1)  { return (Cell *)location[v1]; };
   int CanCast(int);
   unsigned long Spells() { return spells; };
@@ -62,6 +62,15 @@ class Creature : public Thing {
   void SetSpeedMul(int);
   static Graphic *selboxg[3];
   static Graphic *pics[3][CREATURE_MAX][FRAME_MAX];
+  static color trc1d[CREATURE_MAX];
+  static color trc1l[CREATURE_MAX];
+  static color trc2d[CREATURE_MAX];
+  static color trc2l[CREATURE_MAX];
+  static color rrcd[CREATURE_MAX];
+  static color rrcl[CREATURE_MAX];
+  static color tcol[TCOL_MAX][2];
+  static color rcol[RANK_MAX][2];
+  static unsigned char **cremap[CREATURE_MAX][RANK_MAX];
   static int GraphicsInitialized;
   static Statistics *cstats[CREATURE_MAX];
   void ResetFrame();
@@ -76,6 +85,7 @@ class Creature : public Thing {
   void ClearGoals();
   int SafestDirection();
   void GetOwnStats();
+  void UpdateCMap();
   Action *goal[12], *mission[12];
   void Init();
   char dirt, dirf, facing, distt, attacking, limping, crawling, down, progress;
@@ -91,6 +101,7 @@ class Creature : public Thing {
   int target;
   char exploring, speed, speedbase, speedmul, hit, vision, mvision, cw;
   int fatigue;
+  int rank;
   friend class Player;
   friend class Thing;
   friend class Spell;

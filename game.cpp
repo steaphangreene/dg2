@@ -17,10 +17,10 @@
 long long ticker = 0;
 
 Player *p1;
-extern DigSample *ButtonClick;
+extern Sound *ButtonClick;
 
 extern Screen *screen;
-extern User *user;
+extern InputQueue *input;
 Map *curmap = NULL;
 
 #define gm gmode[cmode]
@@ -30,13 +30,13 @@ extern char cmode;
 int MainButtonNum;
 Panel mainp = 0;
 Panel minip = 0;
-Thing things;
+Thing *things = NULL;
 extern Mouse *mouse;
 
 Game *curgame = NULL;
 
 Game::Game(char *inmap, int nump, int numcomp)  {
-  debug_position = 1010;
+  Debug("In Game::Game");
   SPEED = 40;
   SPEED_STEP = 10;
   SPEED_MIN = 10;
@@ -52,119 +52,91 @@ Game::Game(char *inmap, int nump, int numcomp)  {
   num_players = nump+numcomp;
   players = new Player*[num_players];
   for(ctr=0; ctr<nump; ctr++)  {
-    players[ctr] = new Player(PLAYER_NETWORK);
-    (players[ctr]->GetCMap())[223] = 87;
-    (players[ctr]->GetCMap())[216] = 86;
-    (players[ctr]->GetCMap())[106] = 255;
-    (players[ctr]->GetCMap())[87] = 245;
+    players[ctr] = new Player(ctr, PLAYER_NETWORK, ctr/10, (ctr+1)%10);
     }
   for(; ctr<num_players; ctr++)  {
-    players[ctr] = new Player(PLAYER_COMPUTER);
-    (players[ctr]->GetCMap())[223] = 87;
-    (players[ctr]->GetCMap())[216] = 86;
-    (players[ctr]->GetCMap())[106] = 255;
-    (players[ctr]->GetCMap())[87] = 245;
+    players[ctr] = new Player(ctr, PLAYER_COMPUTER, ctr/10, (ctr+1)%10);
     }
   curmap = new Map(inmap);
 
   curgame = this;
-  debug_position = 1090;
+  Debug("Out Game::Game");
   }
 
 Game::~Game()  {
-  debug_position=1501;
-  things.DeleteAll();
-  debug_position=1502;
+  things->DeleteAll();
   delete curmap;
-  debug_position=1503;
   curmap = NULL;
   curgame = NULL;
-  debug_position=1505;
   }
 
 void Game::Play(int pnum)  {
-  debug_position = 1100;
+  Debug("Game::Play() Begin");
   delete players[pnum];
-  debug_position = 1101;
-  p1 = new Player(PLAYER_CONSOLE);
-  debug_position = 1102;
-  (p1->GetCMap())[223] = 191;
-  debug_position = 1103;
-  (p1->GetCMap())[216] = 191;
-  debug_position = 1104;
-  (p1->GetCMap())[106] = 179;
-  debug_position = 1105;
-  (p1->GetCMap())[87] = 44;
-  debug_position = 1106;
+  p1 = new Player(pnum, PLAYER_CONSOLE, 9, 6);
   players[pnum] = p1;
-  debug_position = 1107;
   int ctr, ctr2;
-  debug_position = 1108;
   Graphic *MainButton0 = NULL;
-  debug_position = 1109;
   Graphic *MainButton1 = NULL;
-  debug_position = 1110;
   Graphic Normalg("graphics/pointers/normal.bmp");
-  debug_position = 1111;
+  Debug("Game::Play() Before switch");
   switch(cmode)  {
-    case(0):	debug_position = 1111;
-		screen->FullScreenBMP("graphics/320/backg.bmp");
+    case(0):	screen->FullScreenBMP("graphics/320/backg.bmp");
 		MainButton0 = new Graphic("graphics/320/buttons/menu0.bmp");
 		MainButton1 = new Graphic("graphics/320/buttons/menu1.bmp");
 		backplate = new Graphic("graphics/320/menuback.bmp");
 		break;
-    case(1):	debug_position = 1111;
-		screen->FullScreenBMP("graphics/640/backg.bmp");
+    case(1):	screen->FullScreenBMP("graphics/640/backg.bmp");
 		MainButton0 = new Graphic("graphics/640/buttons/menu0.bmp");
 		MainButton1 = new Graphic("graphics/640/buttons/menu1.bmp");
 		backplate = new Graphic("graphics/640/menuback.bmp");
 		break;
-    case(2):	debug_position = 1112;
-		screen->FullScreenBMP("graphics/800/backg.bmp");
-		debug_position = 1113;
+    case(2):	screen->FullScreenBMP("graphics/800/backg.bmp");
 		MainButton0 = new Graphic("graphics/800/buttons/menu0.bmp");
-		debug_position = 1114;
 		MainButton1 = new Graphic("graphics/800/buttons/menu1.bmp");
-		debug_position = 1115;
 		backplate = new Graphic("graphics/800/menuback.bmp");
-		debug_position = 1116;
 		break;
-    case(3):	debug_position = 1111;
-		screen->FullScreenBMP("graphics/1024/backg.bmp");
+    case(3):	screen->FullScreenBMP("graphics/1024/backg.bmp");
 		MainButton0 = new Graphic("graphics/1024/buttons/menu0.bmp");
 		MainButton1 = new Graphic("graphics/1024/buttons/menu1.bmp");
 		backplate = new Graphic("graphics/1024/menuback.bmp");
 		break;
-    case(4):	debug_position = 1111;
-		screen->FullScreenBMP("graphics/1280/backg.bmp");
+    case(4):	screen->FullScreenBMP("graphics/1280/backg.bmp");
 		MainButton0 = new Graphic("graphics/1280/buttons/menu0.bmp");
 		MainButton1 = new Graphic("graphics/1280/buttons/menu1.bmp");
 		backplate = new Graphic("graphics/1280/menuback.bmp");
 		break;
     }
+  Debug("Game::Play() After switch");
   MainButton0->tcolor = 0;
   MainButton1->tcolor = 0;
-  debug_position = 1120;
+  backplate->tcolor = 0;
   mainp = screen->NewPanel(gm.xorig, gm.yorig, gm.xedge, gm.yedge);
   mouse->SetCursor(&Normalg);
   mouse->ShowCursor();
-  mouse->SetBehavior(MOUSE_CLICK, MOUSE_IGNORE, MOUSE_CLICK);
-  mouse->SetPanelBehavior(mainp, MOUSE_BOX, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetBehavior(0, 1, MB_CLICK);
+  mouse->SetBehavior(0, 2, MB_IGNORE);
+  mouse->SetBehavior(0, 3, MB_CLICK);
+  mouse->SetBehavior(mainp, 1, MB_BOX);
+  mouse->SetBehavior(mainp, 2, MB_CLICK);
+  mouse->SetBehavior(mainp, 3, MB_BOX);
+  mouse->SetSelColor(screen->GetPalette().GetClosestColor(255,255,0));
 
-  debug_position = 1130;
   minip = screen->NewPanel(gm.mxorig, gm.myorig, gm.mxedge, gm.myedge);
   for(ctr=gm.mxorig; ctr<gm.mxedge; ctr++)  {
     for(ctr2=gm.myorig; ctr2<gm.myedge; ctr2++)  {
-      screen->BSetPoint(ctr, ctr2, 0);
+//      screen->SetPoint(ctr, ctr2, 0);
       }
     }
-  mouse->SetPanelBehavior(minip, MOUSE_DRAW, MOUSE_CLICK, MOUSE_BOX);
+  mouse->SetBehavior(minip, 1, MB_CLICKDRAW);
+  mouse->SetBehavior(minip, 2, MB_CLICK);
+  mouse->SetBehavior(minip, 3, MB_BOX);
 
-  debug_position = 1140;
+  Debug("Game::Play() After behavior");
   Creature *dude = NULL;
-  debug_position = 1141;
   dude->SetCreatureGraphic(CREATURE_GUY, "guy");
-  debug_position = 1142;
+
+  Debug("Game::Play() Before Weapons");
   Weapon bow, spear, sword;
   bow.ammo = AMMO_ARROW;
   bow.range = 6;
@@ -182,46 +154,40 @@ void Game::Play(int pnum)  {
   sword.bdam = 30;
   sword.SetImage("graphics/weapons/sword");
 
+  Debug("Game::Play() After Weapons");
+
   for(ctr2=0; ctr2<num_players; ctr2++)  {
     for(ctr=0; ctr<NUM_GUYS; ctr++)  {
-      debug_position = 1143;
       dude = new Creature(CREATURE_GUY, players[ctr2]);
-      debug_position = 1144;
       if(dude == NULL)  Exit(1, "Out of Memory for creatures!!!\r\n");
-      debug_position = 1145;
       dude->Place(curmap->CellAt((ctr/GUY_WIDTH)+1+(8*ctr2),
 		(ctr%GUY_WIDTH)+11));
-      debug_position = 1146;
       if(ctr2 == 0 && ctr == 0) {
 	for(int sp = 0; sp < 64; sp++)  {
-          debug_position = 1147;
 	  dude->LearnSpell(sp);
-          debug_position = 1148;
 	  }
 	}
       else if(ctr2 == 0 && ctr == 1) dude->LearnSpell(SPELL_VISION);
+      else if(ctr2 == 0 && ctr == GUY_WIDTH) dude->LearnSpell(PRAYER_HEAL);
       if(ctr2 == 0 && ctr < 30) dude->AddWeapon(bow);
       else if(ctr2 == 0 && ctr < 60) dude->AddWeapon(spear);
       else if(ctr2 == 0) dude->AddWeapon(sword);
       else if(ctr2 == 1 && ctr < 30) dude->AddWeapon(sword);
       else if(ctr2 == 1 && ctr < 60) dude->AddWeapon(spear);
       else if(ctr2 == 1) dude->AddWeapon(bow);
-      debug_position = 1150;
       }
     }
   dude = NULL;
 
-  debug_position = 1180;
-  IntList pp;
-  pp += curmap->CellAt(4, 4)->Number();
-  pp += curmap->CellAt(40, 40)->Number();
+  Debug("Game::Play() After Guy");
 
   Sprite vp1, vp2, vp3, vp4;
   Graphic viewptrg(4, 4);
-  viewptrg.DefLinH("FFFFFFFF"); 
-  viewptrg.DefLinH("FF------"); 
-  viewptrg.DefLinH("FF------"); 
-  viewptrg.DefLinH("FF------"); 
+  viewptrg.tcolor = (screen->GetPalette().GetClosestColor(255,255,255) == 0);
+  viewptrg.DrawFillRect(0, 0, 4, 1, 8,
+	screen->GetPalette().GetClosestColor(255,255,255));
+  viewptrg.DrawFillRect(0, 1, 1, 3, 8,
+	screen->GetPalette().GetClosestColor(255,255,255));
   vp1.SetImage(viewptrg);
   viewptrg.XFlip();
   vp2.SetImage(viewptrg);
@@ -230,26 +196,38 @@ void Game::Play(int pnum)  {
   viewptrg.XFlip();
   vp3.SetImage(viewptrg);
 
-  debug_position = 1190;
+  Debug("Game::Play() After Minimap Construction");
+
   char scshow = 0;
-  Button MainButton;
+  Clickey MainButton;
   MainButton.SetImage(MainButton0, MainButton1);
   MainButton.SetSound(ButtonClick, NULL);
   MainButton.Move(gm.bx, gm.by);
-  MainButtonNum = MainButton.SpriteNumber();
-  user->MapKeyToButton(SCAN_PAUSE, &MainButton);
+  MainButtonNum = MainButton.Number();
+  input->MapKeyToControl(KEY_PAUSE, &MainButton);
   quit = 0;
   int oldxe=-1, oldxb=-1, oldye=-1, oldyb=-1;
   int packetgo = 0;
+  Debug("Game::Play() Before Main Loop");
   while(!quit)  {
-    debug_position = 1200;
+    Debug("Game::Play() Loop: Start");
     for(ctr=0; ctr<num_players; ctr++)  {
+      Debug("Game::Play() Loop: Player->TakeTurn");
       players[ctr]->TakeTurn(packetgo);
       }
+    Debug("Game::Play(): Tick Things");
+    things->tick();
+    Debug("Game::Play(): Update Things");
+    things->update();
+    Debug("Game::Play(): screen->Refresh()");
+    screen->Refresh();
+    Debug("Game::Play() Loop: Packet Variable Stuff");
     packetgo++;
     if(packetgo >= PACKET_DELAY)  packetgo = 0;
+    Debug("Game::Play() Loop: Mouse Cursor Reset");
     if(p1->CurrentCommand() == COMMAND_DEFAULT)  mouse->SetCursor(&Normalg);
 
+    Debug("Game::Play() Loop: Setup Minimap Indicator");
     { int xvs = gm.xsize/gm.xstep;
       int yvs = gm.ysize/gm.ystep;
       int xs = curmap->XSize()-1;
@@ -270,19 +248,20 @@ void Game::Play(int pnum)  {
       oldye = ye;
       }
 
-    debug_position = 1210;
+    Debug("Game::Play() Loop: Refresh and Ticker++");
     if(scshow == 0)  { screen->RefreshFull(); screen->FadeIn(4); scshow = 1; }
-//    screen->Refresh();
     ticker++;
+    Debug("Game::Play() Loop: Finish");
     }
   delete backplate;
   screen->FadeOut(4);
-  screen->DeletePanel(minip);
-  screen->DeletePanel(mainp);
+  screen->ErasePanelSprites(minip);
+  screen->RemovePanel(minip);
+  screen->ErasePanelSprites(mainp);
+  screen->RemovePanel(mainp);
   screen->ErasePanelSprites(0);
-  screen->ErasePanelBackground(0);
-  screen->ClearScreen();
-  debug_position = 1250;
+  screen->Clear();
+  Debug("Game::Play() End");
   }
 
 void Game::Menus()  {
@@ -298,16 +277,13 @@ void Game::Menus()  {
   }
 
 int Game::MainMenu()  {
-  IntList overwritten;
-  unsigned char *buf;
   char inmainmenu = 1, othermenu = 0;
   Panel menuwin = screen->NewPanel(gm.mxb, gm.myb, gm.mxe, gm.mye);
-  mouse->SetPanelBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  overwritten = screen->ErasePanelSprites(menuwin); 
-  screen->ErasePanelBackground(menuwin); 
-  buf = screen->BackupPanel(menuwin);
+  mouse->SetBehavior(menuwin, 1, MB_CLICK);
+  mouse->SetBehavior(menuwin, 2, MB_CLICK);
+  mouse->SetBehavior(menuwin, 3, MB_CLICK);
 
-  UserAction curact;
+  InputAction *curact;
 
   Graphic *EB0 = NULL;
   Graphic *EB1 = NULL;
@@ -365,58 +341,64 @@ int Game::MainMenu()  {
 	break;
     }
 
-  screen->PasteGraphic(*backplate, gm.mxb, gm.myb);
-  screen->RefreshFull();
+  EB0->tcolor = 0;
+  EB1->tcolor = 0;
+  RB0->tcolor = 0;
+  RB1->tcolor = 0;
+  QB0->tcolor = 0;
+  QB1->tcolor = 0;
 
-  Button EnvironButton;
+  Sprite plate(*backplate);
+  plate.SetPriority(-9000);
+  plate.SetFlag(SPRITE_SOLID|SPRITE_RECTANGLE);
+  plate.Move(gm.mxb, gm.myb);
+  screen->Refresh();
+
+  Clickey EnvironButton;
+  EnvironButton.SetPriority(-9001);
   EnvironButton.SetImage(EB0, EB1);
   EnvironButton.Move(x1, y2);
-  user->MapKeyToButton(SCAN_E, &EnvironButton);
+  input->MapKeyToControl(KEY_E, &EnvironButton);
 
-  Button ResumeButton;
+  Clickey ResumeButton;
+  ResumeButton.SetPriority(-9001);
   ResumeButton.SetImage(RB0, RB1);
   ResumeButton.Move(x1, y1);
-  user->MapKeyToButton(SCAN_R, &ResumeButton);
-  user->MapKeyToButton(SCAN_ESC, &ResumeButton);
+  input->MapKeyToControl(KEY_R, &ResumeButton);
+  input->MapKeyToControl(KEY_ESC, &ResumeButton);
 
-  Button QuitButton;
+  Clickey QuitButton;
+  QuitButton.SetPriority(-9001);
   QuitButton.SetImage(QB0, QB1);
   QuitButton.Move(x2, y1);
-  user->MapKeyToButton(SCAN_Q, &QuitButton);
+  input->MapKeyToControl(KEY_Q, &QuitButton);
 
   while(inmainmenu && (!quit) && (!othermenu))  {
-    curact = user->Action();
-    if(curact.Type() == USERACTION_SYSTEM_QUIT)  quit = 1;
-    if(curact.Type() == USERACTION_BUTTONRELEASED)  {
-      if(curact.ButtonPressed() == QuitButton.SpriteNumber())  quit=1;
-      else if(curact.ButtonPressed() == ResumeButton.SpriteNumber())  {
+    curact = input->WaitForNextAction();
+    if(curact->g.type == INPUTACTION_SYSTEM_QUIT)  quit = 1;
+    if(curact->g.type == INPUTACTION_CONTROLUP)  {
+      if(curact->c.control == QuitButton.Number())  quit=1;
+      else if(curact->c.control == ResumeButton.Number())  {
 	inmainmenu=0;
 	}
-      else if(curact.ButtonPressed() == EnvironButton.SpriteNumber())  {
+      else if(curact->c.control == EnvironButton.Number())  {
 	othermenu=1;
 	}
       }
     screen->Refresh();
     }
-  screen->ErasePanelSprites(menuwin); 
-  screen->ErasePanelBackground(menuwin); 
-  screen->RestorePanel(menuwin, buf);
-  screen->DeletePanel(menuwin);
-  screen->RedrawSprites(overwritten);
+  screen->RemovePanel(menuwin);
   return othermenu;
   }
 
 int Game::EnvironMenu()  {
-  IntList overwritten;
-  unsigned char *buf;
   char inmainmenu = 1, othermenu = 0;
   Panel menuwin = screen->NewPanel(gm.mxb, gm.myb, gm.mxe, gm.mye);
-  mouse->SetPanelBehavior(menuwin, MOUSE_CLICK, MOUSE_CLICK, MOUSE_CLICK);
-  overwritten = screen->ErasePanelSprites(menuwin); 
-  screen->ErasePanelBackground(menuwin); 
-  buf = screen->BackupPanel(menuwin);
+  mouse->SetBehavior(menuwin, 1, MB_CLICK);
+  mouse->SetBehavior(menuwin, 2, MB_CLICK);
+  mouse->SetBehavior(menuwin, 3, MB_CLICK);
 
-  UserAction curact;
+  InputAction *curact;
 
   Graphic *EB0 = NULL;
   Graphic *EB1 = NULL;
@@ -474,40 +456,49 @@ int Game::EnvironMenu()  {
 	break;
     }
 
-  screen->PasteGraphic(*backplate, gm.mxb, gm.myb);
-  screen->RefreshFull();
+  EB0->tcolor = 0;
+  EB1->tcolor = 0;
+  RB0->tcolor = 0;
+  RB1->tcolor = 0;
+  QB0->tcolor = 0;
+  QB1->tcolor = 0;
 
-  Button EnvironButton;
+  Sprite plate(*backplate);
+  plate.SetPriority(-9000);
+  plate.SetFlag(SPRITE_SOLID|SPRITE_RECTANGLE);
+  plate.Move(gm.mxb, gm.myb);
+  screen->Refresh();
+
+  Clickey EnvironButton;
+  EnvironButton.SetPriority(-9001);
   EnvironButton.SetImage(EB0, EB1);
   EnvironButton.Move(x1, y3);
 
-  Button QuitButton;
+  Clickey QuitButton;
+  QuitButton.SetPriority(-9001);
   QuitButton.SetImage(QB0, QB1);
   QuitButton.Move(x1, y2);
 
-  Button ReturnButton;
+  Clickey ReturnButton;
+  ReturnButton.SetPriority(-9001);
   ReturnButton.SetImage(RB0, RB1);
   ReturnButton.Move(x1, y1);
 
-  user->MapKeyToButton(SCAN_M, &ReturnButton);
-  user->MapKeyToButton(SCAN_R, &ReturnButton);
-  user->MapKeyToButton(SCAN_ESC, &ReturnButton);
+  input->MapKeyToControl(KEY_M, &ReturnButton);
+  input->MapKeyToControl(KEY_R, &ReturnButton);
+  input->MapKeyToControl(KEY_ESC, &ReturnButton);
 
   while(inmainmenu && (!quit) && (!othermenu))  {
-    curact = user->Action();
-    if(curact.Type() == USERACTION_SYSTEM_QUIT)  inmainmenu = 1;
-    if(curact.Type() == USERACTION_BUTTONRELEASED)  {
-      if(curact.ButtonPressed() == ReturnButton.SpriteNumber())  {
+    curact = input->WaitForNextAction();
+    if(curact->g.type == INPUTACTION_SYSTEM_QUIT)  inmainmenu = 1;
+    if(curact->g.type == INPUTACTION_CONTROLUP)  {
+      if(curact->c.control == ReturnButton.Number())  {
 	inmainmenu=0;
 	}
       }
     screen->Refresh();
     }
-  screen->ErasePanelSprites(menuwin); 
-  screen->ErasePanelBackground(menuwin); 
-  screen->RestorePanel(menuwin, buf);
-  screen->DeletePanel(menuwin);
-  screen->RedrawSprites(overwritten);
+  screen->RemovePanel(menuwin);
   return othermenu;
   }
 
@@ -525,4 +516,8 @@ void Game::SpeedUp()  {
 
 void Game::SetSpeed()  {
   screen->SetFrameRate(SPEED);
+  }
+
+int Game::NumPlayers()  {
+  return num_players;
   }
