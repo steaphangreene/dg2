@@ -496,3 +496,83 @@ void Cell::StrikeAllIn(Thing *attacker, int skill, int pdam, int bdam)  {
     if(tmpt->Type() == THING_CREATURE)
       ((Creature *)tmpt)->Strike((Creature*)attacker, skill, pdam>>1, bdam>>1);
   }
+
+int Cell::HaveMaterial(int type)  {
+  return contains[type];        
+  }
+
+int Cell::TakeMaterials(int type, int ammt)  {
+  if(contains[type] >= ammt)  {
+    contains[type] -= ammt;
+    return ammt;
+    }
+  else  {   
+    int tmp;
+    tmp = contains[type];
+    contains[type] = 0;
+    return tmp;
+    }
+  }
+
+int Cell::AddMaterials(int type, int ammt)  {
+  contains[type] += ammt;
+  return 0;
+  }
+
+IntList Cell::CellsAtRange(int rng1, int rng2, int fac, int arcsz)  {
+  fac=fac;     // UNUSED!
+  arcsz=arcsz; // UNUSED!
+  IntList ret;
+/*
+  Cell *cur[6];
+  int rng, ctr, ctr2;
+  for(ctr=0; ctr<6; ctr++)  cur[ctr] = this;
+  for(rng=1; rng<=rng2; rng++)  {
+    for(ctr=0; ctr<6; ctr++)  {
+      if(cur[ctr] != NULL) cur[ctr] = cur[ctr]->Next(ctr<<1);
+      }
+    if(rng >= rng1)  {
+      for(ctr=0; ctr<6; ctr++)  {
+	Cell *tmpc = cur[ctr];
+	if(tmpc != NULL)  {
+	  ret += tmpc->Number();
+	  for(ctr2=1; ctr2<rng && tmpc != NULL; ctr2++)  {
+	    tmpc = tmpc->Next(((ctr<<1)+4)%12);
+	    if(tmpc != NULL) ret += tmpc->Number();
+	    }
+	  }
+	}
+      }
+    }
+*/
+  int ctrx, ctry;
+  Cell *tmpc;
+  for(ctry=0; ctry<=rng2; ctry++)  {
+    if(ctry<rng1)  {
+      for(ctrx=(rng1<<1)-ctry; ctrx<=(rng2<<1)-ctry; ctrx+=2)  {
+	tmpc = curmap->CellAt((xcoord+ctrx)>>1, ycoord+ctry);
+	if(tmpc != NULL) ret += tmpc->Number();
+	tmpc = curmap->CellAt((xcoord-ctrx)>>1, ycoord+ctry);
+	if(tmpc != NULL) ret += tmpc->Number();
+	if(ctry > 0)  {
+	  tmpc = curmap->CellAt((xcoord+ctrx)>>1, ycoord-ctry);
+	  if(tmpc != NULL) ret += tmpc->Number();
+	  tmpc = curmap->CellAt((xcoord-ctrx)>>1, ycoord-ctry);
+	  if(tmpc != NULL) ret += tmpc->Number();
+	  }
+	}
+      }
+    else  {
+      for(ctrx=ctry-(rng2<<1); ctrx<=(rng2<<1)-ctry; ctrx+=2)  {
+	tmpc = curmap->CellAt((xcoord+ctrx)>>1, ycoord+ctry);
+	if(tmpc != NULL) ret += tmpc->Number();
+	if(ctry > 0)  {
+	  tmpc = curmap->CellAt((xcoord+ctrx)>>1, ycoord-ctry);
+	  if(tmpc != NULL) ret += tmpc->Number();
+	  }
+	}
+      }
+    }
+
+  return ret;
+  }

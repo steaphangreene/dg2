@@ -1,5 +1,6 @@
 #ifndef	INSOMNIA_CELL_H
 #define	INSOMNIA_CELL_H
+#include "material.h"
 #include "thing.h"
 
 #define TERRAIN_VOID		0
@@ -100,6 +101,10 @@ class Cell : public Thing {
   int Claimed(Thing *);
   int ClaimedHalf(Thing *);
   void StrikeAllIn(Thing *, int, int, int);
+  int HaveMaterial(int type);
+  int AddMaterials(int type, int ammt); 
+  int TakeMaterials(int type, int ammt); 
+  IntList CellsAtRange(int rng1, int rng2, int fac, int arcsz);
 
   protected:
   static void SetupTerrainGraphics();
@@ -119,6 +124,7 @@ class Cell : public Thing {
   friend class Map;
   friend class Spell;
   friend class Thing;
+  int contains[MATERIAL_MAX];
   };
 
 #endif

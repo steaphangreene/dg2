@@ -20,6 +20,8 @@ typedef int Command;
 #define COMMAND_BUILD		11
 #define COMMAND_EXTINGUISH	12
 #define COMMAND_DIG		13
+#define COMMAND_IGNITE		16
+#define COMMAND_HARVEST		17
 
 #define PLAYER_CONSOLE	0
 #define PLAYER_NETWORK	1
@@ -80,6 +82,7 @@ class Player  {
   void SetCMap(char *);
 
   private:
+  void CommandSelected(Action *tmpa);
   void ResetInput();
   void DoSpecial(UserAction &);
   void ClearSelectList();

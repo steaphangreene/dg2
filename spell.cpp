@@ -241,6 +241,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
   }
 
 Spell::~Spell()  {
+  debug_position = 333;
   Remove();
   if(caster != NULL)  {
     if(((Creature *)caster)->sustained_spell == thingnum)  {
@@ -321,6 +322,7 @@ Spell::~Spell()  {
       delete inside;
       }break;
     }
+  debug_position = 399;
   }
 
 void Spell::Select()  {

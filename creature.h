@@ -67,6 +67,8 @@ class Creature : public Thing {
   void Place(Cell *, int);
   void Go(int);
   void Do(const Action *);
+  void DoWhenDone(const Action *);
+  void DoFirst(const Action *);
   Player *Owner()  { return(owner); };
   void SetCreatureGraphic(int, char *);
   int Move(Cell *);
@@ -135,6 +137,7 @@ class Creature : public Thing {
   friend class Player;
   friend class Thing;
   friend class Spell;
+  char mat_type, mat_ammt;
   };
 
 #endif

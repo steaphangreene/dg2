@@ -16,6 +16,10 @@
 #define	ACTION_STOP		13
 #define	ACTION_DIG		14
 #define	ACTION_LOOK		15
+#define	ACTION_IGNITE		16
+#define	ACTION_HARVEST		17
+#define	ACTION_GOGET		18
+
 #define	ACTION_CAST		32
 #define	ACTION_PRAY		64
 #define	ACTION_BUILD		96	//MUST BE HIGHEST!!!
@@ -28,50 +32,67 @@ class Action  {
   Action()  {
     goal = 0;
     connected = 0;
+    accomplished = 0;
     };
   Action(Action& in)  {
     goal = in.goal;
     objects = in.objects;
     connected = 0;
+    accomplished = 0;
     };
   Action(int v1)  {
     goal = v1;
     connected = 0;
+    accomplished = 0;
     };
   Action(int v1, const IntList &v2)  {
     goal = v1;
     objects = (IntList &)v2;
     connected = 0;
+    accomplished = 0;
     };
   Action(int v1, Thing *v2)  {
     goal = v1;
     objects.Clear();
     if(v2 != NULL)  objects += v2->Number();
     connected = 0;
+    accomplished = 0;
     };
   Action(int v1, int v2)  {
     goal = v1;
     objects.Clear();
     objects += v2;
     connected = 0;
+    accomplished = 0;
+    };
+  Action(int v1, int v2, int v3)  {
+    goal = v1;
+    objects.Clear();
+    objects += v2;
+    objects += v3;
+    connected = 0;
+    accomplished = 0;
     };
   Action operator =(Action& in)  {
     goal = in.goal;
     objects = in.objects;
     connected = 0;
+    accomplished = 0;
     return *this;
     };
   int Object()  {
     if(objects.Size() == 0)  return 0;
     else  return objects[0];
     }
-  void DoneFirst()  {
-    objects -= objects[0];
-    if(objects.Size() < 1)  goal = 0;
+  void FinishFirst()  {
+    if(objects.Size() < 2)  accomplished = 1;
+    else objects -= objects[0];
     };
-  void Done()  {
-    goal = 0;
-    objects.Clear();
+  void Finish()  {
+    accomplished = 1;
+    };
+  int IsDone()  {
+    return accomplished;
     };
   void Attach()  {
     connected++;
@@ -85,7 +106,7 @@ class Action  {
   IntList objects;
 
   private:
-  int goal, connected;
+  int goal, accomplished, connected;
   };
 
 #endif

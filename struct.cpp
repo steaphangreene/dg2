@@ -9,8 +9,6 @@ extern Panel mainp;
 extern GMode gmode[10];
 extern char cmode;
 
-int SMF[STRUCT_MAXMAT][MATERIAL_MAXBUILD];
-
 Graphic *Structure::stgr[STRUCT_MAX][MATERIAL_MAXBUILD][3][3][NEIGHBOR_MAX];
 
 int Structure::graphicsinitialized = 0;
@@ -19,9 +17,14 @@ Structure::Structure(int Type, int Material)  {
   if(!graphicsinitialized)  InitGraphics();
   material = Material;
   struct_type = Type;
-  if(material == MATERIAL_WOOD)  fresist = 40;
-  else  fresist = 32767;
-  if(struct_type < STRUCT_MAXMAT)  ffeul = SMF[struct_type][material];
+  if(material == MATERIAL_WOOD)  {
+    fresist = 40;
+    ffeul = struct_qty[struct_type];
+    }
+  else  {
+    fresist = 32767;
+    ffeul = 0;
+    }
   if(Type == STRUCT_BRIDGE || Type == STRUCT_RAMP) height = 1;
   else height = 10;
   location[0] = NULL;
@@ -33,6 +36,10 @@ Structure::Structure(int Type, int Material)  {
   ClaimSprite(image.SpriteNumber());
   image.SetPanel(mainp);
   discovered = 0;
+  int ctr;
+  for(ctr=0; ctr<MATERIAL_MAX; ctr++)  {
+    contains[ctr] = 0;
+    }
   }
 
 Structure::~Structure()  {
@@ -195,13 +202,6 @@ void Structure::InitGraphics()  {
 
   for(ctr=0; ctr<STRUCT_MAX; ctr++)  {
     for(ctr2=0; ctr2<MATERIAL_MAXBUILD; ctr2++)  {
-      if(ctr<STRUCT_MAXMAT)  {
-	if(ctr2 == MATERIAL_WOOD) SMF[ctr][ctr2] = 100;
-	else SMF[ctr][ctr2] = 0;
-	if(ctr == STRUCT_WALL) SMF[ctr][ctr2] *= 10;
-	else if(ctr == STRUCT_RAMP) SMF[ctr][ctr2] *= 5;
-	else if(ctr == STRUCT_BRIDGE) SMF[ctr][ctr2] *= 1;
-	}
       for(ctr3=0; ctr3<NEIGHBOR_MAX; ctr3++)  {
 	stgr[ctr][ctr2][2][0][ctr3] = NULL;
 	}
@@ -249,3 +249,25 @@ void Structure::InitGraphics()  {
   }
  }
 
+int Structure::HaveMaterial(int type)  {
+  return contains[type];
+  }
+
+int Structure::TakeMaterials(int type, int ammt)  {
+  if(contains[type] >= ammt)  {
+    contains[type] -= ammt;
+    return ammt;
+    }
+  else  {
+    int tmp;
+    tmp = contains[type];
+    contains[type] = 0;
+    return tmp;
+    }
+  }
+
+int Structure::AddMaterials(int type, int ammt)  {
+  contains[type] += ammt;
+  if(type == material && contains[type] >= struct_qty[struct_type]) finished=1;
+  return 0;
+  }

@@ -226,6 +226,7 @@ Map::~Map()  {
   }
 
 Cell *Map::CellAt(int x, int y)  {
+  if(x<0 || x >= MAP_XSIZE || y < 0 || y >= MAP_YSIZE) return NULL;
   return cells[x][y];
   }
 

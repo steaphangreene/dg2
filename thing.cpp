@@ -145,17 +145,25 @@ Thing::~Thing()  {
   }
 
 void Thing::DeleteAll()  {
+  debug_position=101;
   int ctr;
   for(ctr=listsize-1; ctr>=0; ctr--)  {
+    debug_position=110;
     if(list[ctr] != NULL)  {
+      debug_position=111;
       delete list[ctr];
+      debug_position=114;
       list[ctr] = NULL;
+      debug_position=118;
       }
+    debug_position=120;
     Changed[ctr] = 0;
     Waiting[ctr] = 0;
     }
+  debug_position=130;
   listsize=0;
   listnext=0;
+  debug_position=199;
   }
 
 void Thing::Remove()  {
@@ -173,6 +181,7 @@ void Thing::Remove()  {
     Changed[thingnum] = 0;
     Waiting[thingnum] = 0;
     }
+  else  fprintf(stderr, "Not Removed = %d\n", thingnum);
   }
 
 void Thing::update()  {

@@ -92,9 +92,21 @@ extern int MainButtonNum;
     Graphic WhirlNg("graphics/pointers/nature/whirl.bmp");
     Graphic ExcorNg("graphics/pointers/nature/excor.bmp");
 
-    Graphic RampBg("graphics/pointers/structs/ramp.bmp");
-    Graphic WallBg("graphics/pointers/structs/wall.bmp");
+    Graphic AquaductBg("graphics/pointers/structs/bridge.bmp");
     Graphic BridgeBg("graphics/pointers/structs/bridge.bmp");
+    Graphic CartBg("graphics/pointers/structs/bridge.bmp");
+    Graphic DrawbridgeBg("graphics/pointers/structs/bridge.bmp");
+    Graphic EnclosureBg("graphics/pointers/structs/bridge.bmp");
+    Graphic FarmlandBg("graphics/pointers/structs/bridge.bmp");
+    Graphic GateBg("graphics/pointers/structs/bridge.bmp");
+    Graphic HullBg("graphics/pointers/structs/bridge.bmp");
+    Graphic IrrigationBg("graphics/pointers/structs/bridge.bmp");
+    Graphic MachineBg("graphics/pointers/structs/bridge.bmp");
+    Graphic PathBg("graphics/pointers/structs/ramp.bmp");
+    Graphic RampBg("graphics/pointers/structs/ramp.bmp");
+    Graphic SeigeEngineBg("graphics/pointers/structs/bridge.bmp");
+    Graphic TowerBg("graphics/pointers/structs/wall.bmp");
+    Graphic WallBg("graphics/pointers/structs/wall.bmp");
 
     Graphic RockMg("graphics/pointers/mat/rock.bmp");
     Graphic WoodMg("graphics/pointers/mat/wood.bmp");
@@ -664,49 +676,49 @@ void Player::TakeTurn(int pkg)  {
       if(multi)  things.StartTalk();
       else  things.ClearTalk();
       if(doing == DOING_NORMAL && cur_comm == COMMAND_EXTINGUISH)  {
-	int ctr;
 	Action *tmpa = new Action(ACTION_EXTINGUISH, intparam[0]);
-	for(ctr=0; ctr<Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
+	ResetState();
+	}
+      else if(doing == DOING_NORMAL && cur_comm == COMMAND_IGNITE)  {
+	Action *tmpa = new Action(ACTION_IGNITE, intparam[0]);
+	CommandSelected(tmpa);
 	ResetState();
 	}
       else if(doing == DOING_NORMAL && cur_comm == COMMAND_LOOK)  {
-	int ctr;
 	Action *tmpa = new Action(ACTION_LOOK, intparam[0]);
-	for(ctr=0; ctr<Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
 	ResetState();
 	}
       else if(doing == DOING_NORMAL && cur_comm == COMMAND_DIG)  {
-	int ctr;
 	Action *tmpa = new Action(ACTION_DIG, listparam[0]);
-	for(ctr=0; ctr<Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
 	ResetState();
 	}
-      if(doing == DOING_NORMAL && cur_comm == COMMAND_BUILD)  {
+      else if(doing == DOING_NORMAL && cur_comm == COMMAND_BUILD)  {
 	if(argstate==1)  {
+	  intparam[1] = -1;
 	  PickMaterial(&intparam[1]);
 	  }
 	else if(argstate==2)  {
 	  SelectLCells(&listparam[0]);
 	  }
 	else {
-	  int ctr;
 	  Action *tmpa = new Action(ACTION_BUILD+(intparam[0]*MATERIAL_MAXBUILD)
 		+intparam[1], listparam[0]);
-	  for(ctr=0; ctr<Selectsize; ctr++)  {
-	    ((Creature *)Selectlist[ctr])->Do(tmpa);
-//	    printf("Told Creature to build!\r\n");
-	    }
+	  CommandSelected(tmpa);
 	  ResetState();
 	  }
 	argstate++;
 	}
-      if(doing == DOING_NORMAL && (cur_comm == COMMAND_CAST
+      else if(doing == DOING_NORMAL && cur_comm == COMMAND_HARVEST)  {
+	if(argstate==1)  {
+	  Action *tmpa = new Action(ACTION_HARVEST, intparam[0]);
+	  CommandSelected(tmpa);
+	  ResetState();
+	  }
+	}
+      else if(doing == DOING_NORMAL && (cur_comm == COMMAND_CAST
 		|| cur_comm == COMMAND_PRAY))  {
 //	printf("Spell #%d initialized\r\n", intparam[0]);
 	if(spact[intparam[0]][argstate-1] != -1 && argstate < 5)  {
@@ -930,6 +942,10 @@ void Player::TakeTurn(int pkg)  {
 	  cur_comm = COMMAND_LOOK;
 	  SelectThing(&intparam[0]);
 	  }
+	else if(curact.ButtonPressed()==__com[SCAN_I])  {
+	  cur_comm = COMMAND_IGNITE;
+	  SelectCell(&intparam[0]);
+	  }
 	else if(curact.ButtonPressed()==__com[SCAN_X])  {
 	  cur_comm = COMMAND_EXTINGUISH;
 	  SelectCell(&intparam[0]);
@@ -946,6 +962,11 @@ void Player::TakeTurn(int pkg)  {
 	    }
 	  cur_comm = COMMAND_DEFAULT;
 	  }
+	else if(curact.ButtonPressed()==__com[SCAN_H])  {
+	  cur_comm = COMMAND_HARVEST;
+	  intparam[0] = -1;
+	  PickMaterial(&intparam[0]);
+	  argstate = 1;	  }
 	else if(curact.ButtonPressed()==__com[SCAN_B])  {
 	  cur_comm = COMMAND_BUILD;
 	  PickStructure(&intparam[0]);
@@ -979,25 +1000,33 @@ void Player::TakeTurn(int pkg)  {
 	case COMMAND_DEFAULT:	mouse->SetCursor(&Normalg);	break;
 	case COMMAND_ATTACK:	mouse->SetCursor(&Attackg);	break;
 	case COMMAND_BUILD:	mouse->SetCursor(&Buildg);	break;
+	case COMMAND_HARVEST:	mouse->SetCursor(&Harvestg);	break;
 	case COMMAND_LOOK:	mouse->SetCursor(&Lookg);	break;
 	case COMMAND_FOLLOW:	mouse->SetCursor(&Followg);	break;
 	case COMMAND_KILL:	mouse->SetCursor(&Killg);	break;
 	case COMMAND_CAST:	mouse->SetCursor(&Castg);	break;
 	case COMMAND_PRAY:	mouse->SetCursor(&Natureg);	break;
 	case COMMAND_EXTINGUISH:mouse->SetCursor(&Extg);	break;
+	case COMMAND_IGNITE:	mouse->SetCursor(&Igniteg);	break;
 	case COMMAND_DIG:	mouse->SetCursor(&Digg);	break;
 	}
       if(Selectsize == 1)  {
 	Graphic tmpg;
 	Creature *ind = (Creature*)Selectlist[0];
+	int cgl = 0;
+	if(ind->goal[0] != NULL)  cgl = ind->goal[0]->Goal();
 	if(!shown)  {
-	  tmpg = screen->gprintf(0, 255,"Altitude:\nHeight:\nHit:\nStamina:");
+	  tmpg = screen->gprintf(0, 255,
+		"Altitude:\nHeight:\nHit:\nStamina:\nGoal:\nMaterial:\n Ammt:");
 	  output.SetImage(tmpg);
 	  output.Move(7, 350);
 	  oldval[0] = ind->altitude;
 	  oldval[1] = ind->height;
 	  oldval[2] = ind->hit;
 	  oldval[3] = ind->fatigue;
+	  oldval[4] = cgl;
+	  oldval[5] = ind->mat_type;
+	  oldval[6] = ind->mat_ammt;
 	  tmpg = screen->gprintf(0, 255, "%d", oldval[0]);
 	  outval[0].SetImage(tmpg);
 	  outval[0].Move(64, 350);
@@ -1010,6 +1039,15 @@ void Player::TakeTurn(int pkg)  {
 	  tmpg = screen->gprintf(0, 255, "%d", oldval[3]);
 	  outval[3].SetImage(tmpg);
 	  outval[3].Move(64, 386);
+	  tmpg = screen->gprintf(0, 255, "%d", oldval[4]);
+	  outval[4].SetImage(tmpg);
+	  outval[4].Move(64, 398);
+	  tmpg = screen->gprintf(0, 255, "%d", oldval[5]);
+	  outval[5].SetImage(tmpg);
+	  outval[5].Move(64, 410);
+	  tmpg = screen->gprintf(0, 255, "%d", oldval[6]);
+	  outval[6].SetImage(tmpg);
+	  outval[6].Move(64, 422);
 	  shown = 1;
 	  screen->RefreshFast();
 	  }
@@ -1042,6 +1080,27 @@ void Player::TakeTurn(int pkg)  {
 	    outval[3].Move(64, 386);
 	    screen->RefreshFast();
 	    }
+	  if(oldval[4] != cgl)  {
+	    oldval[4] = cgl;
+	    tmpg = screen->gprintf(0, 255, "%d", oldval[4]);
+	    outval[4].SetImage(tmpg);
+	    outval[4].Move(64, 398);
+	    screen->RefreshFast();
+	    }
+	  if(oldval[5] != ind->mat_type)  {
+	    oldval[5] = ind->mat_type;
+	    tmpg = screen->gprintf(0, 255, "%d", oldval[5]);
+	    outval[5].SetImage(tmpg);
+	    outval[5].Move(64, 410);
+	    screen->RefreshFast();
+	    }
+	  if(oldval[6] != ind->mat_ammt)  {
+	    oldval[6] = ind->mat_ammt;
+	    tmpg = screen->gprintf(0, 255, "%d", oldval[6]);
+	    outval[6].SetImage(tmpg);
+	    outval[6].Move(64, 422);
+	    screen->RefreshFast();
+	    }
 	  }
 	}
       else  if(shown) {
@@ -1050,6 +1109,9 @@ void Player::TakeTurn(int pkg)  {
 	outval[1].Erase();
 	outval[2].Erase();
 	outval[3].Erase();
+	outval[4].Erase();
+	outval[5].Erase();
+	outval[6].Erase();
 	screen->RefreshFast();
 	shown = 0;
 	}
@@ -1119,27 +1181,21 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 	Action *tmpa;
 	if(com == COMMAND_KILL)  tmpa = new Action(ACTION_KILL, whooped);
 	else  tmpa = new Action(ACTION_ATTACK, whooped);
-	for(ctr = 0; ctr < Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
 	return;
 	}
       else  if(com == COMMAND_ATTACK)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
 	Action *tmpa = new Action(ACTION_ATTACK, hit);
-	for(ctr = 0; ctr < Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
 	return;
 	}
       else  if(com == COMMAND_KILL)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
 	Action *tmpa = new Action(ACTION_KILL, hit);
-	for(ctr = 0; ctr < Selectsize; ctr++)  {
-	  ((Creature *)Selectlist[ctr])->Do(tmpa);
-	  }
+	CommandSelected(tmpa);
 	return;
 	}
       else  com = COMMAND_FOLLOW;
@@ -1197,7 +1253,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
 	if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
 	Action *tmpa = new Action(ACTION_TURN, ndir);
-	((Creature *)Selectlist[0])->Do(tmpa);
+	CommandSelected(tmpa);
 	return;
 	}
       else  {
@@ -1211,9 +1267,7 @@ void Player::OrderSelected(Command com, UserAction ma)  {
       if(((Creature *)Selectlist[0])->ToldYou != NULL)
 		((Creature *)Selectlist[0])->ToldYou->Play();
       Action *tmpa = new Action(ACTION_GO, curmap->CellAt(x1, y1));
-      for(ctr=0; ctr<Selectsize; ctr++)  {
-	((Creature *)Selectlist[ctr])->Do(tmpa);
-	}
+      CommandSelected(tmpa);
       }
     else  {
       int xd = x2+1-x1, yd = y2+1-y1;
@@ -1395,31 +1449,31 @@ void Player::DoSpecial(UserAction &curact)  {
 	}
       if(key >= 0)  {
 	switch(key)  {
-	  case(SCAN_A): *workingint = STRUCT_AQUADUCT;	break;
-	  case(SCAN_B): *workingint = STRUCT_BRIDGE;	break;
-	  case(SCAN_C): *workingint = STRUCT_CART;	break;
-	  case(SCAN_D): *workingint = STRUCT_DITCH;	break;
-	  case(SCAN_E): *workingint = -1;		break;
-	  case(SCAN_F): *workingint = STRUCT_FARMLAND;	break;
-	  case(SCAN_G): *workingint = -1;		break;
-	  case(SCAN_H): *workingint = STRUCT_HULL;	break;
-	  case(SCAN_I): *workingint = -1;		break;
-	  case(SCAN_J): *workingint = -1;		break;
-	  case(SCAN_K): *workingint = -1;		break;
-	  case(SCAN_L): *workingint = -1;		break;
-	  case(SCAN_M): *workingint = STRUCT_MACHINE;	break;
-	  case(SCAN_N): *workingint = -1;		break;
-	  case(SCAN_O): *workingint = -1;		break;
-	  case(SCAN_P): *workingint = STRUCT_PATH;	break;
-	  case(SCAN_Q): *workingint = -1;		break;
-	  case(SCAN_R): *workingint = STRUCT_RAMP;	break;
-	  case(SCAN_S): *workingint = STRUCT_STRUCTURE;	break;
-	  case(SCAN_T): *workingint = STRUCT_TOWER;	break;
-	  case(SCAN_U): *workingint = -1;		break;
-	  case(SCAN_V): *workingint = -1;		break;
-	  case(SCAN_W): *workingint = STRUCT_WALL;	break;
-	  case(SCAN_Y): *workingint = -1;		break;
-	  case(SCAN_X): *workingint = -1;		break;
+	  case(SCAN_A): *workingint = STRUCT_AQUADUCT;		break;
+	  case(SCAN_B): *workingint = STRUCT_BRIDGE;		break;
+	  case(SCAN_C): *workingint = STRUCT_CART;		break;
+	  case(SCAN_D): *workingint = STRUCT_DRAWBRIDGE;	break;
+	  case(SCAN_E): *workingint = STRUCT_ENCLOSURE;		break;
+	  case(SCAN_F): *workingint = STRUCT_FARMLAND;		break;
+	  case(SCAN_G): *workingint = STRUCT_GATE;		break;
+	  case(SCAN_H): *workingint = STRUCT_HULL;		break;
+	  case(SCAN_I): *workingint = STRUCT_IRRIGATION_DITCH;	break;
+	  case(SCAN_J): *workingint = -1;			break;
+	  case(SCAN_K): *workingint = -1;			break;
+	  case(SCAN_L): *workingint = -1;			break;
+	  case(SCAN_M): *workingint = STRUCT_MACHINE;		break;
+	  case(SCAN_N): *workingint = -1;			break;
+	  case(SCAN_O): *workingint = -1;			break;
+	  case(SCAN_P): *workingint = STRUCT_PATH;		break;
+	  case(SCAN_Q): *workingint = -1;			break;
+	  case(SCAN_R): *workingint = STRUCT_RAMP;		break;
+	  case(SCAN_S): *workingint = STRUCT_SEIGE_ENGINE;	break;
+	  case(SCAN_T): *workingint = STRUCT_TOWER;		break;
+	  case(SCAN_U): *workingint = -1;			break;
+	  case(SCAN_V): *workingint = -1;			break;
+	  case(SCAN_W): *workingint = STRUCT_WALL;		break;
+	  case(SCAN_Y): *workingint = -1;			break;
+	  case(SCAN_X): *workingint = -1;			break;
 	  }
 	if(key != SCAN_ESC)  {
 	  UserAction tmpa;
@@ -1446,8 +1500,8 @@ void Player::DoSpecial(UserAction &curact)  {
 	switch(key)  {
 	  case(SCAN_A): *workingint = MATERIAL_ADM;	break;
 	  case(SCAN_B): *workingint = MATERIAL_BRONZE;	break;
-	  case(SCAN_C): *workingint = MATERIAL_COPPER;	break;
-	  case(SCAN_D): *workingint = -1;		break;
+	  case(SCAN_C): *workingint = -1;		break;
+	  case(SCAN_D): *workingint = MATERIAL_DIRT;	break;
 	  case(SCAN_E): *workingint = -1;		break;
 	  case(SCAN_F): *workingint = -1;		break;
 	  case(SCAN_G): *workingint = -1;		break;
@@ -1463,7 +1517,7 @@ void Player::DoSpecial(UserAction &curact)  {
 	  case(SCAN_Q): *workingint = -1;		break;
 	  case(SCAN_R): *workingint = MATERIAL_ROCK;	break;
 	  case(SCAN_S): *workingint = MATERIAL_STEEL;	break;
-	  case(SCAN_T): *workingint = MATERIAL_TIN;	break;
+	  case(SCAN_T): *workingint = -1;		break;
 	  case(SCAN_U): *workingint = -1;		break;
 	  case(SCAN_V): *workingint = -1;		break;
 	  case(SCAN_W): *workingint = MATERIAL_WOOD;	break;
@@ -1475,7 +1529,7 @@ void Player::DoSpecial(UserAction &curact)  {
 	  curact = tmpa;
 	  }
 	if(*workingint >= 0)  {
-//	  printf("Picked Material!\r\n");
+//	  printf("Picked Material = %d!\r\n", *workingint);
 	  workingint = NULL;
 	  doing = DOING_NORMAL;
 	  ResetInput();
@@ -1972,6 +2026,11 @@ void Player::PickMaterial(int *v)  {
   int ctr;
   Button *cb;
   for(ctr=0; ctr<256; ctr++)  {
+    if(__com[ctr] != 0)  {
+      cb = screen->GetButtonByNumber(__com[ctr]);
+      if(cb->IsPressed())  cb->StealthClick();
+      cb->Erase();	user->UnmapButton(cb);	cb->Disable();
+      }
     if(__bb[ctr] != 0)  {
       cb = screen->GetButtonByNumber(__bb[ctr]);
       if(cb->IsPressed())  cb->StealthClick();
@@ -1984,6 +2043,7 @@ void Player::PickMaterial(int *v)  {
       }
     }
   workingint = v, workinglist = NULL, doing = DOING_PICKMATERIAL;
+//  printf("picking mat!\n");
   }
 
 void Player::SelectCell(int *v)
@@ -2065,3 +2125,16 @@ void Player::SetCMap(char *cm)  {
   memcpy(cmap, cm, 256);
   }
 
+void Player::CommandSelected(Action *tmpa)  {
+  int ctr;
+  if(user->IsPressed(SCAN_LSHIFT))  {
+    for(ctr=0; ctr<Selectsize; ctr++)  {
+      ((Creature *)Selectlist[ctr])->DoWhenDone(tmpa);
+      }
+    }
+  else  {
+    for(ctr=0; ctr<Selectsize; ctr++)  {
+      ((Creature *)Selectlist[ctr])->Do(tmpa);
+      }
+    }
+  }

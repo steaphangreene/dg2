@@ -291,10 +291,15 @@ int main(int argc, char **argv)  {
       if(multi)  net.IPX_ChangeSocket(7810);
       Game *thisgame = new Game("maps/map1.cw2", nump, 1);
       thisgame->Play(pnum);
+      debug_position=1301;
       delete thisgame;
+      debug_position=1302;
       mouse->SetCursor(NormalMouseG);
+      debug_position=1303;
       screen->RefreshFull();
+      debug_position=1304;
       if(multi)  net.IPX_ChangeSocket(7446);
+      debug_position=1305;
       }
     play = 0;
     }

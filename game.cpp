@@ -72,10 +72,14 @@ Game::Game(char *inmap, int nump, int numcomp)  {
   }
 
 Game::~Game()  {
+  debug_position=1501;
   things.DeleteAll();
+  debug_position=1502;
   delete curmap;
+  debug_position=1503;
   curmap = NULL;
   curgame = NULL;
+  debug_position=1505;
   }
 
 void Game::Play(int pnum)  {
@@ -182,7 +186,7 @@ void Game::Play(int pnum)  {
       debug_position = 1144;
       if(dude == NULL)  Exit(1, "Out of Memory for creatures!!!\r\n");
       debug_position = 1145;
-      dude->Place(curmap->CellAt((ctr/GUY_WIDTH)+1+(6*ctr2),
+      dude->Place(curmap->CellAt((ctr/GUY_WIDTH)+1+(8*ctr2),
 		(ctr%GUY_WIDTH)+11));
       debug_position = 1146;
       if(ctr2 == 0 && ctr == 0) {
@@ -196,6 +200,9 @@ void Game::Play(int pnum)  {
       if(ctr2 == 0 && ctr < 30) dude->AddWeapon(bow);
       else if(ctr2 == 0 && ctr < 60) dude->AddWeapon(spear);
       else if(ctr2 == 0) dude->AddWeapon(sword);
+      else if(ctr2 == 1 && ctr < 30) dude->AddWeapon(sword);
+      else if(ctr2 == 1 && ctr < 60) dude->AddWeapon(spear);
+      else if(ctr2 == 1) dude->AddWeapon(bow);
       debug_position = 1150;
       }
     }
