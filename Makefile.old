@@ -1,0 +1,41 @@
+DJDIR:=	/usr
+CC:=	gcc -Wall -s -O6 -ffast-math -funroll-all-loops -malign-double
+OBJS=	$(DJDIR)/include/user/*.o
+DEPS=	$(DJDIR)/include/user/*.cpp
+DEPH=	$(DJDIR)/include/user/*.h
+ALL=	Makefile
+LHEADS=	thing.h creature.h cell.h player.h action.h map.h stats.h weapon.h \
+	game.h spell.h
+LOBJS=	player.o map.o game.o tw2.o creature.o thing.o cell.o spell.o
+LIBS=	-luser -lm -lX11
+
+all:	tw2 bcr rs
+
+bcr:	bcr.cpp creature.h $(DEPS) $(ALL)
+	$(CC) -o bcr bcr.cpp $(LIBS)
+
+rs:	rs.cpp $(DEPS) $(ALL)
+	$(CC) -o rs rs.cpp $(LIBS)
+
+tw2:	$(LOBJS) $(ALL) $(LHEADS) $(DEPS)
+	make -C $(DJDIR)/include/user user
+	$(CC) -o tw2 $(LOBJS) $(LIBS)
+
+$(DJDIR)/include/user/%.o:	$(DJDIR)/include/user/%.cpp \
+                                $(DJDIR)/include/user/screen.h \
+                                $(DJDIR)/include/user/makefile
+	@echo -n
+#	make -C $(DJDIR)/include/user
+
+%.o:	%.cpp $(ALL)
+	$(CC) -c $<
+
+player.o:	player.cpp $(LHEADS) $(ALL)
+game.o:	game.cpp $(LHEADS) $(ALL)
+map.o:	map.cpp $(LHEADS) $(ALL)
+thing.o:	thing.cpp $(LHEADS) $(ALL)
+tw2.o:	tw2.cpp $(LHEADS) $(ALL)
+creature.o:	creature.cpp $(LHEADS) $(ALL)
+cell.o:	cell.cpp $(LHEADS) $(ALL)
+spell.o:	spell.cpp $(LHEADS) $(ALL)
+
