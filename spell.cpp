@@ -205,11 +205,11 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       }
     case(SPELL_OPEN_PORTAL):  {
       if(params.Size()!=2)
-	Exit(0, "Improperly Cast Portal Spell (!= 2 args)!\r\n");
+	U2_Exit(0, "Improperly Cast Portal Spell (!= 2 args)!\r\n");
       if(list[params[0]]->Type() != THING_CELL)
-	Exit(0, "Improperly Cast Portal Spell (Origin not Cell)!\r\n");
+	U2_Exit(0, "Improperly Cast Portal Spell (Origin not Cell)!\r\n");
       if(params[1] != -1 && list[params[1]]->Type() != THING_CELL)
-	Exit(0, "Improperly Cast Portal Spell (Destination not Cell)!\r\n");
+	U2_Exit(0, "Improperly Cast Portal Spell (Destination not Cell)!\r\n");
       location[0] = (Cell*)list[params[0]];
       if(params[1] != -1)  location[1] = (Cell*)list[params[1]];
       else location[1] = NULL;
@@ -237,7 +237,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       Changed[thingnum] = 1;
       } break;
     default:  {
-      Exit(0, "Unknown Spell (#%d)!\r\n", name);
+      U2_Exit(0, "Unknown Spell (#%d)!\r\n", name);
       } break;
     }
   ReScaleme();
@@ -497,15 +497,15 @@ void Spell::tickme()  {
 	    && dest->Inside(0) == NULL && dest->Owner(0) == dest->Owner(1)
 	    && dest->Owner(0) == NULL)  {
 	Creature *movee = (Creature*)orig->Inside(0);
-        if(movee == (Creature *)this)  Exit(1, "Porting Portal!\r\n");
-        else if(movee == NULL)  Exit(1, "Porting NULL!\r\n");
+        if(movee == (Creature *)this)  U2_Exit(1, "Porting Portal!\r\n");
+        else if(movee == NULL)  U2_Exit(1, "Porting NULL!\r\n");
 	movee->UndoVision();
 	orig->Leave(movee);
 	if(!dest->Claim(movee, dest->Height(), 0, 1000, 1000))  {
-	  Exit(1, "Portal Object Failed to Claim!\r\n");
+	  U2_Exit(1, "Portal Object Failed to Claim!\r\n");
 	  }
 	if(!dest->Enter(movee, dest->Height(), 0, 1000, 1000))  {
-	  Exit(1, "Portal Object Failed to Enter!\r\n");
+	  U2_Exit(1, "Portal Object Failed to Enter!\r\n");
 	  }
 	dest->UnClaim(movee);
 	movee->location[0] = dest;

@@ -1,0 +1,12 @@
+Heal self while injured below 50% crashes with frame # -1
+Redraw of half a cell is whacky
+Radraw of guy half-off a cell off
+Occasional attack designation crash - Player::TakeTurn(): Check Select/Command
+Random crash with designation mouse rightclick to the top-left
+Random crash while building walls
+Cursor keeps fucking dissapearing
+Cursor tcolor gets fucked in menu
+Use all the cool info from CRE
+GraphicsInitialized in creature.cpp will break with multiple creatures
+Clear and remake cremaps between games
+Won't auto-extinguish fires to the northeast

@@ -1,9 +1,9 @@
 #include <user.h>
 
 int main(int argc, char **argv)  {
-  InitUserEngine(argc, argv);
+  U2_Init(argc, argv);
   Screen sc(320, 200, 8);
   Keyboard key;
-  Exit(0);
+  U2_Exit(0);
   return 0;
   }

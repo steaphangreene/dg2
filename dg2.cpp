@@ -40,7 +40,7 @@ char **ARGV;
 int ARGC;
 
 int main(int argc, char **argv)  {
-  InitUserEngine(argc, argv);
+  U2_Init(argc, argv);
 //  Speaker spk(1, 16, 22050);
 //  Death = new Sound("sounds/die.wav");
 //  Punch = new Sound("sounds/punch.wav");
@@ -220,7 +220,7 @@ int main(int argc, char **argv)  {
     }
 //  while(!screen->ModeSupported(gmode[cmode].cmode))  cmode--;
 //  screen ->SetMode(gmode[cmode].cmode);
-  screen->SetApparentDepth(8);
+  screen->SetApparentDepth(32);
   screen->SetSize(gmode[cmode].x, gmode[cmode].y);
   screen->SetFont("basic10.sgf");
   input = new InputQueue;
@@ -353,7 +353,7 @@ int main(int argc, char **argv)  {
   delete screen;
   delete key;
   delete input;
-  Exit(0);
+  U2_Exit(0);
   return 0;
   }
 

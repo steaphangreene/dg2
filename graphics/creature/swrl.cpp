@@ -11,7 +11,7 @@ int main(int argc, char **argv)  {
   int ctr, ctrx, ctry;
   for(ctr=1; ctr<argc; ctr++)  {
     if(access(argv[ctr], R_OK))
-	Exit(1, "Hey, \"%s\" isn't there!\n", argv[ctr]);
+	U2_Exit(1, "Hey, \"%s\" isn't there!\n", argv[ctr]);
     Graphic tmpg(argv[ctr]);
     for(ctry=0; ctry<tmpg.ysize; ctry++)  {
       for(ctrx=0; ctrx<tmpg.xsize; ctrx++)  {
@@ -28,7 +28,7 @@ int main(int argc, char **argv)  {
     tmpg.YFlip();
     if(argv[ctr][3] == 'l') argv[ctr][3] = 'r';
     else if(argv[ctr][3] == 'r') argv[ctr][3] = 'l';
-    else Exit(1, "\"%s\" is not a r/l run graphic\n", argv[ctr]);
+    else U2_Exit(1, "\"%s\" is not a r/l run graphic\n", argv[ctr]);
     tmpg.SaveBMP(argv[ctr], pl);
     }
   }

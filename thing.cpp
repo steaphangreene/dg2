@@ -115,7 +115,7 @@ void Thing::UnclaimSprite(int spnum)  {
 
 Thing *Thing::FindBySpriteNumber(int spnum)  {
   if(!splist[spnum]) {
-    Exit(1, "Attempt to find thing associated with unassociated sprite %d\n",
+    U2_Exit(1, "Attempt to find thing associated with unassociated sprite %d\n",
 	spnum);
     }
   return splist[spnum];
@@ -193,17 +193,17 @@ void Thing::Add()  {
   if(listsize == 0)  {
     listsize = THINGLIST_START;
     list = new Thing*[THINGLIST_START];
-    if(list == NULL)  Exit(1, "Out of Memory for Things list!!\r\n");
+    if(list == NULL)  U2_Exit(1, "Out of Memory for Things list!!\r\n");
     bzero(list, THINGLIST_START*sizeof(Thing *));
 
     Changed = new char[THINGLIST_START];
     if(Changed == NULL)
-	Exit(1, "Out of Memory for Things-changed flags!!\r\n");
+	U2_Exit(1, "Out of Memory for Things-changed flags!!\r\n");
     bzero(Changed, THINGLIST_START*sizeof(char));
 
     Waiting = new char[THINGLIST_START];
     if(Waiting == NULL)
-	Exit(1, "Out of Memory for Things-waiting flags!!\r\n");
+	U2_Exit(1, "Out of Memory for Things-waiting flags!!\r\n");
     bzero(Waiting, THINGLIST_START*sizeof(char));
 
     bzero(splist, MAX_SPRITES*sizeof(Thing **));
@@ -319,7 +319,7 @@ void Thing::updateme()  {
 
 void Thing::ForceEnter(Thing *in)  {
   if(inside[0] != inside[1])
-    Exit(1, "Force-Entering a half-entered thing!\r\n");
+    U2_Exit(1, "Force-Entering a half-entered thing!\r\n");
   if(inside[0] != in && inside[0] != NULL)
     { inside[0]->ForceEnter(in); return; }
   inside[0] = in;
@@ -332,7 +332,7 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
 //  //debug_position = 5500;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
-    Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
+    U2_Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
 //  //debug_position = 5510;
@@ -343,7 +343,7 @@ int Thing::Enter(Thing *in, int alt, int ht, int up, int down)  {
       in->altitude = Height();
       return (1==1);
       }
-    else if(inside[0] != inside[1])  Exit(1, "Bad tele-placement!\n");
+    else if(inside[0] != inside[1])  U2_Exit(1, "Bad tele-placement!\n");
     else  {
       return inside[0]->Enter(in, alt, ht, up, down);
       }
@@ -416,7 +416,7 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
 //  //debug_position = 5600;
 //  printf("Entering!\r\n");
   if(!(location[0]->location[0]->Claimed(in)))  {
-//    Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
+//    U2_Exit(0, "Attempt to enter unclaimed Cell, type = %d!\r\n", type);
     return (1==2);
     }	//  printf("Done checking Claim!\r\n");
 //  //debug_position = 5610;
@@ -424,7 +424,7 @@ int Thing::CanEnter(Thing *in, int alt, int ht, int up, int down)  {
     if(inside[0] == NULL)  {
       return (1==1);
       }
-    else if(inside[0] != inside[1])  Exit(1, "Bad tele-placement!\n");
+    else if(inside[0] != inside[1])  U2_Exit(1, "Bad tele-placement!\n");
     else  {
       return inside[0]->CanEnter(in, alt, ht, up, down);
       }
@@ -511,8 +511,8 @@ void Thing::Leave(Thing *in)  {
     }
   else  {
     if(inside[0] == in || inside[1] == in)
-      Exit(1, "Exiting half-entered Cell!!!\n");
-    else  Exit(1, "Exiting non-entered Cell!!!\n");
+      U2_Exit(1, "U2_Exiting half-entered Cell!!!\n");
+    else  U2_Exit(1, "U2_Exiting non-entered Cell!!!\n");
     }
   }
 
@@ -529,7 +529,7 @@ void Thing::LeaveHalf(Thing *in)  {
     inside[0]->LeaveHalf(in);
     }
   else {
-    Exit(1, "Exiting non-entered thing!!!\n");
+    U2_Exit(1, "U2_Exiting non-entered thing!!!\n");
     }
   }
 

@@ -159,7 +159,7 @@ void Game::Play(int pnum)  {
   for(ctr2=0; ctr2<num_players; ctr2++)  {
     for(ctr=0; ctr<NUM_GUYS; ctr++)  {
       dude = new Creature(CREATURE_GUY, players[ctr2]);
-      if(dude == NULL)  Exit(1, "Out of Memory for creatures!!!\r\n");
+      if(dude == NULL)  U2_Exit(1, "Out of Memory for creatures!!!\r\n");
       dude->Place(curmap->CellAt((ctr/GUY_WIDTH)+1+(8*ctr2),
 		(ctr%GUY_WIDTH)+11));
       if(ctr2 == 0 && ctr == 0) {

@@ -1847,7 +1847,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTCREATURE):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
@@ -1864,7 +1864,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTCREATURES):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
@@ -1882,7 +1882,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTFCREATURES):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, enemies;
@@ -1909,7 +1909,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTECREATURES):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, friends;
@@ -1936,7 +1936,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTOBJS):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	Thing *sel;
@@ -1955,7 +1955,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTFOBJS):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, enemies, objs;
@@ -1986,7 +1986,7 @@ void Player::DoSpecial(InputAction *curact)  {
 	}
       }break;
     case(DOING_SELECTEOBJS):  {
-      if(workinglist == NULL)  Exit(1, "Bad workinglist!!!\r\n");
+      if(workinglist == NULL)  U2_Exit(1, "Bad workinglist!!!\r\n");
       if(curact->g.type == INPUTACTION_MOUSEDOWN && selected.Size() > 0)  {
 	int ctr;
 	IntList alies, friends, objs;
@@ -2340,7 +2340,7 @@ void Player::CommandSelected(Action *tmpa)  {
   }
 
 void Player::SetTeamColors(int c1, int c2) {
-  Exit(0, "Dynamic Team Color change not supported\n");
+  U2_Exit(0, "Dynamic Team Color change not supported\n");
   }
 
 int Player::TeamColor1() {

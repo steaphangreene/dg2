@@ -50,11 +50,11 @@ void WeaponManipEvent(InputAction *act);
 void ManipWeapon();
 
 int main(int argc, char **argv)  {
-  InitUserEngine(argc, argv);
+  U2_Init(argc, argv);
   char buf[64]; int ctr, ctrw;
   Graphic *atc, *tc;
 
-  if(argc != 2)  Exit(1, "USAGE: cre <directory> -or- cre <crf_file>\n");
+  if(argc != 2)  U2_Exit(1, "USAGE: cre <directory> -or- cre <crf_file>\n");
 #ifdef D_OK
   if(!access(argv[1], F_OK|R_OK|D_OK))  {
 #else
@@ -77,11 +77,11 @@ int main(int argc, char **argv)  {
     if((*ver)[0] != VER1 || (*ver)[1] != VER2
 		|| (*ver)[2] != VER3 || (*ver)[3] != VER4)  {
       if((*ver)[3] == 0)  {
-	Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d!\n",
+	U2_Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d!\n",
 		argv[1], (*ver)[0], (*ver)[1], (*ver)[2]);
 	}
       else  {
-	Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d-B%d!\n",
+	U2_Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d-B%d!\n",
 		argv[1], (*ver)[0], (*ver)[1], (*ver)[2], (*ver)[3]);
 	}
       }
@@ -96,7 +96,7 @@ int main(int argc, char **argv)  {
     fromres=1;
     }
   else  {
-    Exit(1, "Unable to access \"%s\"!\n", argv[1]);
+    U2_Exit(1, "Unable to access \"%s\"!\n", argv[1]);
     }
   screen = new Screen;
   screen->SetApparentDepth(8);
@@ -568,7 +568,7 @@ int main(int argc, char **argv)  {
 	xpos+=4; ResetFrame();
 	PlayLoopM((weapon*WEAP_INC)+FRAME_RUNR+1);
 	xpos+=4; ResetFrame();
-	//Exit(1, "Did reset!\n");
+	//U2_Exit(1, "Did reset!\n");
 	}
       else if(act->c.control == AttB.Number())  {
 	if(!stance)  Stance();
@@ -636,7 +636,7 @@ int main(int argc, char **argv)  {
       WeaponManipEvent(act);
       }
     }
-  Exit(0);
+  U2_Exit(0);
   return 0;
   }
 

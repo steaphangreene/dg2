@@ -208,11 +208,11 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
   if((*ver)[0] != VER1 || (*ver)[1] != VER2
               || (*ver)[2] != VER3 || (*ver)[3] != VER4)  {
     if((*ver)[3] == 0)  {
-      Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d!\n",
+      U2_Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d!\n",
               buf, (*ver)[0], (*ver)[1], (*ver)[2]);
       }
     else  {
-      Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d-B%d!\n",
+      U2_Exit(1, "Incompatible version, \"%s\" was made by CRE v%d.%d.%d-B%d!\n",
               buf, (*ver)[0], (*ver)[1], (*ver)[2], (*ver)[3]);
       }
     }
@@ -601,7 +601,7 @@ void Creature::Act()  {
 	      }
 	    if(!Location(0)->Next(((dirt+1)/2)*2)->
 		Enter(this, altitude, Height(), 1, 2))
-			Exit(1, "Bad guarenteed Enter!\r\n");
+			U2_Exit(1, "Bad guarenteed Enter!\r\n");
 	    Cell *tmp1 = location[0], *tmp2 = location[1];
 	    location[0] = Location(0)->Next(((dirt+1)/2)*2);
 	    location[1] = NULL;
@@ -1263,7 +1263,7 @@ void Creature::Think()  {
 
     default:  {						//BUILD!!
       int mat, st = goal[0]->Goal() - ACTION_BUILD;
-      if(st < 0)  break; //Exit(1, "Bad action for creature (%d)\r\n", st);
+      if(st < 0)  break; //U2_Exit(1, "Bad action for creature (%d)\r\n", st);
       mat = st%MATERIAL_MAXBUILD;
       st /= MATERIAL_MAXBUILD;
 //      printf("Building %d out of %d!\r\n", st, mat);

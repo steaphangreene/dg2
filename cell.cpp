@@ -327,7 +327,7 @@ void Cell::DrawMe()  {
 //  if(x2>gm.xedge) x2=gm.xedge;
 //  if(y2>gm.yedge) y2=gm.yedge;
 //  if((x1>=x2) || (y1>=y2))  return;
-////  Exit(1, "Nope, got here!  (%d, %d)->(%d, %d)\n"x1, y1, x2, y2);
+////  U2_Exit(1, "Nope, got here!  (%d, %d)->(%d, %d)\n"x1, y1, x2, y2);
 //  curmap->Draw(x1, y1, x2, y2);
   }
 
@@ -393,7 +393,7 @@ int Cell::Claim(Thing *in, int alt, int ht, int up, int down)  {
     else  return (1==2);
     return(1==1);
     }
-//Exit(1, "Claiming half-claimed Cell!!!\r\n");
+//U2_Exit(1, "Claiming half-claimed Cell!!!\r\n");
   if(dibs[0] != NULL || dibs[1] != NULL)
     return (1==2);
 
@@ -460,14 +460,14 @@ void Cell::UnClaim(Thing *in)  {
     dibs[0] = NULL;
     dibs[1] = NULL;
     }
-  else  Exit(0, "Unclaiming non-claimed cell!\r\n");
+  else  U2_Exit(0, "Unclaiming non-claimed cell!\r\n");
   }
 
 void Cell::UnClaimHalf(Thing *in)  {
 //  printf("Unclaiming Half!\n");
   if(dibs[0] == in)  dibs[0] = NULL;
   else if(dibs[1] == in)  dibs[1] = NULL;
-  else Exit(1, "Half-Unclaiming a non-claimed cell!!\r\n");
+  else U2_Exit(1, "Half-Unclaiming a non-claimed cell!!\r\n");
   }
 
 int Cell::Claimed(Thing *in)  {

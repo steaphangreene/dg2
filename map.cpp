@@ -103,14 +103,14 @@ Map::Map(char *fn)  {
   int ctr, ctr2;
   FILE *mapfl = fopen(fn, "rb");
   if(mapfl == NULL)  {
-    Exit(1, "Mapfile: \"%s\" not found!\n", fn);
+    U2_Exit(1, "Mapfile: \"%s\" not found!\n", fn);
     }
   fscanf(mapfl, "%dx%d\n", &MAP_XSIZE, &MAP_YSIZE);
   cells = new Cell**[MAP_XSIZE];
-  if(cells == NULL)  Exit(1, "Out of Memory for Total Cells!!!\r\n");
+  if(cells == NULL)  U2_Exit(1, "Out of Memory for Total Cells!!!\r\n");
   for(ctr=0; ctr<MAP_XSIZE; ctr++)  {
     cells[ctr] = new Cell*[MAP_YSIZE];
-    if(cells[ctr] == NULL)  Exit(1, "Out of Memory for Cells!!!\r\n");
+    if(cells[ctr] == NULL)  U2_Exit(1, "Out of Memory for Cells!!!\r\n");
     }
   for(ctr2=0; ctr2<MAP_YSIZE; ctr2++)  {
     for(ctr=0; ctr<(MAP_XSIZE - (ctr2 & 1)); ctr++)  {
@@ -143,7 +143,7 @@ Map::Map(char *fn)  {
 			tert, tert);;
 	  break;
 	}
-      if(cells[ctr][ctr2] == NULL)  Exit(1, "Out of Memory for Cell!!!\r\n");
+      if(cells[ctr][ctr2] == NULL)  U2_Exit(1, "Out of Memory for Cell!!!\r\n");
       }
     if(ctr2 & 1)  {
       cells[MAP_XSIZE-1][ctr2] = NULL;

@@ -1,4 +1,4 @@
-CC:=	gcc $(shell U2-CFlgs)
+CC:=	gcc $(shell U2-CFlags)
 #CC:=	gcc -Wall -s -O2 -ffast-math
 UDIR:=	$(shell U2-Dir)
 OBJS:=	$(shell csh -c "echo $(UDIR)*.o")

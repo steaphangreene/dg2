@@ -42,7 +42,7 @@ int main(int argc, char **argv)  {
       }
 //    else if(!access(argv[1], R_OK|F_OK))  {
 //      }
-    else Exit(1, "File/Directory \"%s\" not found!\n", argv[1]);
+    else U2_Exit(1, "File/Directory \"%s\" not found!\n", argv[1]);
     }
   Screen screen;
   User user;
