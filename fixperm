@@ -1,3 +1,0 @@
-#!/bin/tcsh
-chown root.root ./dg2
-chmod a+xs ./dg2
