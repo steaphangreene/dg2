@@ -17,7 +17,7 @@ tar:	dg2.cpp
 	cd .. ; tar czhvf ~/c/archive/dg2.$(TSTR).tar.gz \
 		dg2/*.cpp dg2/*.[hc] dg2/Makefile dg2/graphics \
 		dg2/maps dg2/mapedit/*.cpp dg2/mapedit/*.[tc]w2 \
-		dg2/mapedit/*.bmp dg2/*.crf
+		dg2/mapedit/*.bmp dg2/*.crf dg2/*.sgf
 
 
 bcr:	bcr.cpp creature.h $(OBJS) $(ALL)
