@@ -182,15 +182,15 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
   Debug("Creature::SetCreatureGraphic()  Getting Team Colors");
   Graphic tcols("graphics/allteams.bmp");
   for(ctr=0; ctr<TCOL_MAX; ++ctr) {
-    tcol[ctr][0] = tcols.image[ctr].uc[0];
-    tcol[ctr][1] = tcols.image[ctr].uc[1];
+    tcol[ctr][0] = tcols.image[ctr].u8[0];
+    tcol[ctr][1] = tcols.image[ctr].u8[1];
     }
 
   Debug("Creature::SetCreatureGraphic()  Getting Rank Colors");
   Graphic rcols("graphics/ranks.bmp");
   for(ctr=0; ctr<RANK_MAX; ++ctr) {
-    rcol[ctr][0] = rcols.image[ctr].uc[0];
-    rcol[ctr][1] = rcols.image[ctr].uc[1];
+    rcol[ctr][0] = rcols.image[ctr].u8[0];
+    rcol[ctr][1] = rcols.image[ctr].u8[1];
     }
 
   Debug("Creature::SetCreatureGraphic()  Before Resfile");
@@ -199,12 +199,12 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
   Debug("Creature::SetCreatureGraphic()  Within Resfile");
   CharBag *ver = crf.GetCharBag();
   Graphic *trc = crf.GetGraphic();
-  trc1d[ctype] = trc->image[0].uc[0];
-  trc1l[ctype] = trc->image[0].uc[1];
-  trc2d[ctype] = trc->image[1].uc[0];
-  trc2l[ctype] = trc->image[1].uc[1];
-  rrcd[ctype] = trc->image[2].uc[0];
-  rrcl[ctype] = trc->image[2].uc[1];
+  trc1d[ctype] = trc->image[0].u8[0];
+  trc1l[ctype] = trc->image[0].u8[1];
+  trc2d[ctype] = trc->image[1].u8[0];
+  trc2l[ctype] = trc->image[1].u8[1];
+  rrcd[ctype] = trc->image[2].u8[0];
+  rrcl[ctype] = trc->image[2].u8[1];
   if((*ver)[0] != VER1 || (*ver)[1] != VER2
               || (*ver)[2] != VER3 || (*ver)[3] != VER4)  {
     if((*ver)[3] == 0)  {

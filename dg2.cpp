@@ -236,7 +236,7 @@ int main(int argc, char **argv)  {
     screen->SetPalette("graphics/1024/start.bmp");
 
     Graphic NormalMouseG("graphics/pointers/normal.bmp", screen->GetPalette());
-    NormalMouseG.tcolor = NormalMouseG.image[4].uc[0];
+    NormalMouseG.tcolor = NormalMouseG.image[4].u8[0];
     mouse->SetCursor(NormalMouseG);
     mouse->ShowCursor();
     mouse->SetSelColor(screen->GetPalette().GetClosestColor(255,255,0));

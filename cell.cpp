@@ -288,7 +288,7 @@ void Cell::DrawMyMini()  {
   for(xp=xb; xp < xm; xp++)  {
     for(yp=yb; yp < ym; yp++)  {
       screen->SetPoint(gm.mxorig+xp, gm.myorig+yp, pics[vt &
-	(discovered*255)][gmode[cmode].xstep/32][visible][0]->image[0].uc[0]);
+	(discovered*255)][gmode[cmode].xstep/32][visible][0]->image[0].u8[0]);
 		// **************** 8-bit hardcode...
       }
     }
