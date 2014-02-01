@@ -1,5 +1,5 @@
-#include <user.h>
-#include <user/resfile.h>
+#include "../user/user.h"
+#include "../user/resfile.h"
 #include <unistd.h>
 
 #define ACT_WALKL	0

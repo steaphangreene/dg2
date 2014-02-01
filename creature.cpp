@@ -1,5 +1,5 @@
 #include <string.h>
-#include <user.h>
+#include "../user/user.h"
 
 #include "dg2.h"
 #include "creature.h"
@@ -255,7 +255,7 @@ void Creature::SetCreatureGraphic(int ctype, char *dir)  {
 Creature::Creature(int ctype, Player *pown)  {
 //  if(GotYou == NULL)  GotYou = new Sound("sounds/What.wav");
 //  if(ToldYou == NULL)  ToldYou = new Sound("sounds/Ok.wav");
-  inside = new (Thing*)[2];
+  inside = new Thing*[2];
   inside[0] = NULL;
   inside[1] = NULL;
   type = THING_CREATURE;
@@ -1930,8 +1930,8 @@ void  Creature::ResetFrame()  {
   progress = 0;
   }
 
-int Creature::SafestDirection()  return ret {
-  ret = -1;
+int Creature::SafestDirection() {
+  int ret = -1;
   int ctr, dirs = 0x0FFF, tmpd = 0x0FFF;
   for(ctr=0; ctr<12; ctr++)  {
     if(Location(0)->Next(ctr) == NULL
@@ -1943,11 +1943,14 @@ int Creature::SafestDirection()  return ret {
   for(ctr=facing; ret == -1 && ctr<facing+12; ctr++)  {
     if(tmpd & (1<<(ctr%12)))  ret = ctr;
     }
+  return ret;
   }
 
-int Creature::CanCast(int sp)  return ret {
+int Creature::CanCast(int sp) {
+  int ret;
   if(sp < 32) ret = spells & (1 << sp);
   else ret = prayers & (1 << (sp-32));
+  return ret;
   }
 
 void Creature::LearnSpell(int sp)  {

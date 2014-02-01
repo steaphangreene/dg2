@@ -1,4 +1,4 @@
-#include <user/screen.h>
+#include "../user/screen.h"
 #include "struct.h"
 #include "cell.h"
 #include "gmode.h"
@@ -31,7 +31,7 @@ Structure::Structure(int Type, int Material)  {
   else height = 10;
   location[0] = NULL;
   location[1] = NULL;
-  inside = new (Thing*)[2];
+  inside = new Thing*[2];
   inside[0] = NULL;
   inside[1] = NULL;
   type = THING_STRUCT;

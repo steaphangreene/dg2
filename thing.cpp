@@ -5,8 +5,8 @@
 #include "cell.h"
 #include "spell.h"
 #include "creature.h"
-#include <user/engine.h>
-#include <user/net.h>
+#include "../user/engine.h"
+#include "../user/net.h"
 
 extern long long ticker;
 
@@ -30,7 +30,7 @@ char Thing::talking = 0;
 
 #define MOUSE_UPDATE_INTERVAL	16384
 
-#include <user/screen.h>
+#include "../user/screen.h"
 extern Screen *screen;
 extern Network net;
 

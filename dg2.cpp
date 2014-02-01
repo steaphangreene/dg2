@@ -1,7 +1,7 @@
 #include <time.h>
 #include <string.h>
-#include <user/net.h>
-#include <user/screen.h>
+#include "../user/net.h"
+#include "../user/screen.h"
 #include "action.h"
 #include "thing.h"
 #include "creature.h"

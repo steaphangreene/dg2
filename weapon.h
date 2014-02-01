@@ -1,7 +1,7 @@
 #ifndef INSOMNIA_WEAPON_H
 #define INSOMNIA_WEAPON_H
 
-#include <user/graphic.h>
+#include "../user/graphic.h"
 
 class Weapon  {
   public:
@@ -41,7 +41,7 @@ class Weapon  {
     image[1][2] = in.image[1][2];
     };
 
-  Weapon Weapon::operator =(const Weapon &in)  {
+  Weapon operator =(const Weapon &in)  {
     range = in.range;
     mrange = in.mrange;
     pdam = in.pdam;

@@ -1,6 +1,6 @@
 #ifndef	INSOMNIA_PLAYER_H
 #define	INSOMNIA_PLAYER_H
-#include <user/screen.h>
+#include "../user/screen.h"
 #include "thing.h"
 #include "action.h"
 

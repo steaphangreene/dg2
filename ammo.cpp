@@ -6,6 +6,7 @@
 Graphic *Ammo::ammog[AMMO_MAX];
 int Ammo::grinit = 0;
 
+class Map;
 extern Panel mainp;
 extern Map *curmap;
 extern GMode gmode[10];

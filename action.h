@@ -25,7 +25,7 @@
 #define	ACTION_BUILD		96	//MUST BE HIGHEST!!!
 
 #include "cell.h"
-#include <user/list.h>
+#include "../user/list.h"
 
 class Action  {
   public:

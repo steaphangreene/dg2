@@ -1,6 +1,6 @@
 #ifndef INSOMNIA_AMMO_H
 #define INSOMNIA_AMMO_H
-#include <user/graphic.h>
+#include "../user/graphic.h"
 #include "thing.h"
 #include "cell.h"
 

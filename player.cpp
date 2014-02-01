@@ -1,5 +1,5 @@
-#include <user/screen.h>
-#include <user/net.h>
+#include "../user/screen.h"
+#include "../user/net.h"
 #include <stdlib.h>
 #include "player.h"
 #include "creature.h"

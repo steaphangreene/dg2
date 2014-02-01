@@ -1,6 +1,6 @@
-CC:=	gcc $(shell U2-CFlags)
+CC:=	gcc $(shell ../user/U2-CFlags)
 #CC:=	gcc -Wall -s -O2 -ffast-math
-UDIR:=	$(shell U2-Dir)
+UDIR:=	$(shell ../user/U2-Dir)
 OBJS:=	$(shell csh -c "echo $(UDIR)*.o")
 DEPS:=	$(shell csh -c "echo $(UDIR)*.cpp")
 DEPH:=	$(shell csh -c "echo $(UDIR)*.h")
@@ -8,7 +8,7 @@ ALL=	Makefile
 LHEADS=	thing.h creature.h cell.h player.h action.h map.h stats.h weapon.h game.h spell.h ammo.h struct.h graphics/creature/cre.h
 LOBJS=	map.o game.o dg2.o creature.o thing.o cell.o spell.o ammo.o struct.o player.o
 #LOBJS=	*.o
-LIBS:=	$(shell U2-Libs)
+LIBS:=	$(shell ../user/U2-Libs)
 TSTR=   $(shell date +"%Y%m%d%H%M")
 
 all:	dg2 palconv

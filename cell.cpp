@@ -1,4 +1,4 @@
-#include <user/engine.h>
+#include "../user/engine.h"
 #include "map.h"
 #include "cell.h"
 #include "gmode.h"
@@ -45,7 +45,7 @@ Cell::Cell(int ter, int alt, int walt)  {
   near[4] = NULL;
   near[5] = NULL;
   lastport = NULL;
-  inside = new (Thing*)[2];
+  inside = new Thing*[2];
   inside[0] = NULL;
   inside[1] = NULL;
   dibs[0] = NULL;

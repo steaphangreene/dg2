@@ -1,4 +1,4 @@
-#include <user/engine.h>
+#include "../user/engine.h"
 #include "spell.h"
 #include "map.h"
 #include "cell.h"
@@ -117,7 +117,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       Debug("Spell::Spell(): case(PRAYER_HEAL): Finish");
       } break;
     case(SPELL_VISION):  {
-      images = new (Sprite *)[1];
+      images = new Sprite *[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
       images[0]->SetPanel(mainp);
@@ -135,7 +135,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       ((Creature *)location[0])->DoVision();
       } break;
     case(SPELL_INVISIBILITY):  {
-      images = new (Sprite *)[1];
+      images = new Sprite *[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
       images[0]->SetPanel(mainp);
@@ -144,7 +144,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       Changed[thingnum] = 1;
       } break;
     case(SPELL_FIREBALL):  {
-      images = new (Sprite *)[1];
+      images = new Sprite *[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
       images[0]->SetPanel(mainp);
@@ -157,7 +157,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       dodad = tmpt->thingnum;
       } break; 
     case(SPELL_GLOBE_OF_SEEING):  {
-      images = new (Sprite *)[1];
+      images = new Sprite *[1];
       images[0] = new Sprite;
       images[0]->DisableCollisions();
       images[0]->SetPanel(mainp);
@@ -224,7 +224,7 @@ Spell::Spell(Thing *cstr, int nm, const IntList &pms)  {
       altitude = 2000;
       params -= params[0];
       params -= params[1];
-      images = new (Sprite *)[3];
+      images = new Sprite *[3];
       images[0] = new Sprite;
       images[1] = new Sprite;
       images[2] = new Sprite;

@@ -1,5 +1,5 @@
 #include <time.h>
-#include <user/screen.h>
+#include "../user/screen.h"
 #include "action.h"
 #include "thing.h"
 #include "creature.h"
